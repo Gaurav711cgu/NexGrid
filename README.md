@@ -2,7 +2,7 @@
 
 # NexaGrid
 
-**Enterprise-Grade Real-Time Distributed Code Collaboration Platform**
+** Real-Time Distributed Code Collaboration Platform**
 <br/>
 *A high-throughput collaborative IDE engineered with CRDT document synchronization, isolated POSIX sandboxed execution, streaming LLM completions, and full Prometheus/Grafana telemetry.*
 
