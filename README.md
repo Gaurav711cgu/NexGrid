@@ -149,14 +149,14 @@ CREATE INDEX idx_exec_logs_metadata_gin ON execution_logs USING gin (metadata js
 
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Register new user account with hashed password | **Public** (Unauthenticated) |
-| `POST` | `/api/auth/login` | Validate credentials & issue JWT token | **Public** (Unauthenticated) |
-| `GET` | `/api/auth/me` | Retrieve current authenticated user profile | **Bearer Token** |
-| `POST` | `/api/rooms` | Create new collaborative room with code | **Bearer Token** |
-| `GET` | `/api/rooms/{code}` | Retrieve room configuration & join check | **Public** (Unauthenticated) |
-| `GET` | `/api/rooms/{id}/history` | Fetch O(1) cursor-paginated execution logs | **Public** (Unauthenticated) |
-| `POST` | `/api/execution/{id}/run` | Execute code snippet inside POSIX sandbox | **Bearer Token** |
-| `GET` | `/api/analytics/room/{id}/summary` | Retrieve SQL analytical telemetry window metrics | **Bearer Token** |
+| `POST` | `/api/auth/register` | Register new user account with hashed password | `Public (Unauthenticated)` |
+| `POST` | `/api/auth/login` | Validate credentials & issue JWT token | `Public (Unauthenticated)` |
+| `GET` | `/api/auth/me` | Retrieve current authenticated user profile | `Bearer Token` |
+| `POST` | `/api/rooms` | Create new collaborative room with code | `Bearer Token` |
+| `GET` | `/api/rooms/{code}` | Retrieve room configuration & join check | `Public (Unauthenticated)` |
+| `GET` | `/api/rooms/{id}/history` | Fetch O(1) cursor-paginated execution logs | `Public (Unauthenticated)` |
+| `POST` | `/api/execution/{id}/run` | Execute code snippet inside POSIX sandbox | `Bearer Token` |
+| `GET` | `/api/analytics/room/{id}/summary` | Retrieve SQL analytical telemetry window metrics | `Bearer Token` |
 
 <details>
 <summary><b>POST /api/execution/{room_id}/run — Request & Response Payload Example</b></summary>
