@@ -2,7 +2,7 @@
 
 # NexaGrid
 
-** Real-Time Distributed Code Collaboration Platform**
+**Enterprise-Grade Real-Time Distributed Code Collaboration Platform**
 <br/>
 *A high-throughput collaborative IDE engineered with CRDT document synchronization, isolated POSIX sandboxed execution, streaming LLM completions, and full Prometheus/Grafana telemetry.*
 
@@ -153,8 +153,8 @@ CREATE INDEX idx_exec_logs_metadata_gin ON execution_logs USING gin (metadata js
 | `POST` | `/api/auth/login` | Validate credentials & issue JWT token | `Public (Unauthenticated)` |
 | `GET` | `/api/auth/me` | Retrieve current authenticated user profile | `Bearer Token` |
 | `POST` | `/api/rooms` | Create new collaborative room with code | `Bearer Token` |
-| `GET` | `/api/rooms/{code}` | Retrieve room configuration & join check | `Public (Unauthenticated)` |
-| `GET` | `/api/rooms/{id}/history` | Fetch O(1) cursor-paginated execution logs | `Public (Unauthenticated)` |
+| `GET` | `/api/rooms/{code}` | Retrieve room configuration & join check | `Bearer Token` |
+| `GET` | `/api/rooms/{id}/history` | Fetch O(1) cursor-paginated execution logs | `Bearer Token` |
 | `POST` | `/api/execution/{id}/run` | Execute code snippet inside POSIX sandbox | `Bearer Token` |
 | `GET` | `/api/analytics/room/{id}/summary` | Retrieve SQL analytical telemetry window metrics | `Bearer Token` |
 

@@ -45,7 +45,7 @@ async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_u
     )
 
 @router.get("/{code}", response_model=RoomResponse)
-async def get_room_by_code(code: str):
+async def get_room_by_code(code: str, user: dict = Depends(get_current_user)):
     room = await db.fetchrow("SELECT * FROM rooms WHERE code = $1", code.upper())
     if not room:
         raise HTTPException(status_code=404, detail="Room not found or expired")
@@ -66,7 +66,8 @@ async def get_room_by_code(code: str):
 async def get_room_execution_history(
     room_id: str,
     cursor: Optional[str] = Query(None, description="Cursor for O(1) pagination (executed_at_id)"),
-    limit: int = Query(10, ge=1, le=50)
+    limit: int = Query(10, ge=1, le=50),
+    user: dict = Depends(get_current_user)
 ):
     """
     Advanced FAANG Pattern: Cursor-based pagination replacing OFFSET/LIMIT.
