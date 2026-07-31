@@ -1,0 +1,47 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Active WebSocket Connections",
+      "type": "stat",
+      "targets": [{ "expr": "sum(ws_connections_active)", "legendFormat": "Connections" }],
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 }
+    },
+    {
+      "title": "CRDT Operations / Sec",
+      "type": "timeseries",
+      "targets": [{ "expr": "rate(crdt_ops_total[1m])", "legendFormat": "Ops/sec" }],
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 }
+    },
+    {
+      "title": "Code Execution Latency (P95)",
+      "type": "timeseries",
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(code_execution_seconds_bucket[5m])) by (le))", "legendFormat": "P95 Latency (s)" }],
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 }
+    },
+    {
+      "title": "Blocked Code Executions (Security)",
+      "type": "stat",
+      "targets": [{ "expr": "sum(code_executions_blocked_total)", "legendFormat": "Blocked Attempts" }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "title": "AI Completion Latency (P90)",
+      "type": "timeseries",
+      "targets": [{ "expr": "histogram_quantile(0.90, sum(rate(ai_completion_seconds_bucket[5m])) by (le))", "legendFormat": "P90 Latency (s)" }],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 }
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["nexagrid", "faang", "telemetry"],
+  "time": { "from": "now-15m", "to": "now" },
+  "title": "NexaGrid Real-Time Telemetry Dashboard"
+}

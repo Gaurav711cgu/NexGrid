@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+
+# Environment & DB
+.env
+*.db
+*.sqlite3
+
+# Build outputs
+dist/
+build/
+.pytest_cache/
+
+# OS / Editor files
+.DS_Store
+.vscode/
+.idea/
