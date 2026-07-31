@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Code2, Share2, History, Play, Sparkles, Check, User } from 'lucide-react'
+import { Code2, Share2, History, Play, Sparkles, Check, User, Activity, Layers, ArrowUpRight } from 'lucide-react'
 
 export function RoomHeader({
   room,
@@ -10,7 +10,9 @@ export function RoomHeader({
   user,
   onOpenAuth,
   language,
-  setLanguage
+  setLanguage,
+  activeTab,
+  setActiveTab
 }) {
   const [copied, setCopied] = useState(false)
 
@@ -23,97 +25,109 @@ export function RoomHeader({
   }
 
   return (
-    <header className="glass-panel" role="banner" style={{
+    <header className="display-card" role="banner" style={{
+      borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
+      borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '0.6rem 1.5rem',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0.6rem 1.5rem', borderRadius: 0, borderBottom: '1px solid rgba(255,255,255,0.08)'
+      background: '#07070a'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '0.6rem',
-          background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(129,140,248,0.1))',
-          padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.3)'
-        }}>
-          <Code2 size={20} color="#818cf8" aria-hidden="true" />
-          <span style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '-0.02em', background: 'linear-gradient(135deg, #fff, #9ca3af)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            NexaGrid
-          </span>
-        </div>
+      {/* Left: Brand Mark & Capsule Badge */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        <button
+          onClick={() => setActiveTab('hero')}
+          style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Fira Code', fontWeight: 800, fontSize: '1.1rem' }}
+        >
+          <span style={{ color: '#10b981' }}>&gt;_</span> NEXAGRID
+        </button>
 
-        {room && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{room.name}</span>
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.4rem',
-              background: 'rgba(0,0,0,0.3)', padding: '0.25rem 0.6rem', borderRadius: '6px',
-              fontSize: '0.8rem', fontFamily: 'Fira Code', color: '#9ca3af'
-            }}>
-              ROOM: <strong style={{ color: '#6366f1' }}>{room.code}</strong>
-              <button
-                onClick={handleCopyCode}
-                aria-label="Copy Room Code to clipboard"
-                title="Copy Room Code"
-                style={{ background: 'none', border: 'none', color: copied ? '#10b981' : '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', minWidth: '24px', minHeight: '24px', justifyContent: 'center' }}
-              >
-                {copied ? <Check size={14} aria-hidden="true" /> : <Share2 size={14} aria-hidden="true" />}
-              </button>
-            </div>
-          </div>
-        )}
+        <div className="badge-capsule" style={{ fontSize: '0.7rem' }}>
+          <div className="live-dot-green" aria-hidden="true" />
+          REAL-TIME CRDT PLATFORM
+        </div>
       </div>
 
-      <nav aria-label="Room Controls" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        {/* Language Selector */}
-        <label htmlFor="language-select" className="sr-only" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden' }}>Target Language</label>
-        <select
-          id="language-select"
-          aria-label="Select Target Programming Language"
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="input-field"
-          style={{ width: '130px', padding: '0.4rem 0.6rem', fontSize: '0.85rem' }}
+      {/* Center: Recruiter-First SPA Navigation Tabs (Zero Routing Issues) */}
+      <nav aria-label="Main Application Navigation" style={{ display: 'flex', gap: '0.4rem' }}>
+        <button
+          onClick={() => setActiveTab('editor')}
+          className={activeTab === 'editor' ? 'btn-solid-white' : 'btn-outline-white'}
+          style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', minHeight: '36px' }}
         >
-          <option value="python">Python 3</option>
-          <option value="javascript">JavaScript</option>
-          <option value="go">Go</option>
-        </select>
-
-        {/* Execution Logs */}
-        <button onClick={onToggleHistory} className="btn-secondary" aria-label="Open Execution History Logs" style={{ padding: '0.45rem 0.8rem', fontSize: '0.85rem' }}>
-          <History size={16} aria-hidden="true" />
-          <span>Logs</span>
+          STUDIO EDITOR
         </button>
 
-        {/* AI Pair Programmer */}
-        <button onClick={onToggleAI} className="btn-secondary" aria-label="Open AI Assistant Drawer" style={{ padding: '0.45rem 0.8rem', fontSize: '0.85rem', borderColor: 'rgba(99,102,241,0.4)', color: '#818cf8' }}>
-          <Sparkles size={16} color="#818cf8" aria-hidden="true" />
-          <span>AI Assistant</span>
+        <button
+          onClick={() => setActiveTab('metrics')}
+          className={activeTab === 'metrics' ? 'btn-solid-white' : 'btn-outline-white'}
+          style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', minHeight: '36px' }}
+        >
+          <Activity size={14} aria-hidden="true" /> SYSTEM METRICS & PIPELINES
         </button>
 
-        {/* Run Code Button */}
-        <button onClick={onRunCode} className="btn-success" aria-label="Execute Code in Sandbox Container" disabled={isRunning} style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}>
-          <Play size={16} fill="white" aria-hidden="true" />
-          <span>{isRunning ? 'Executing...' : 'Run Code'}</span>
+        <button
+          onClick={() => setActiveTab('architecture')}
+          className={activeTab === 'architecture' ? 'btn-solid-white' : 'btn-outline-white'}
+          style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', minHeight: '36px' }}
+        >
+          <Layers size={14} aria-hidden="true" /> ARCHITECTURE & SECURITY
         </button>
+      </nav>
 
-        {/* User Auth Profile Avatar */}
+      {/* Right: Room Actions & User Profile */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        {activeTab === 'editor' && (
+          <>
+            {/* Target Language Select */}
+            <select
+              aria-label="Select Target Programming Language"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="display-card-inner"
+              style={{
+                padding: '0.35rem 0.6rem', fontSize: '0.8rem', color: '#ffffff',
+                fontFamily: 'Fira Code', outline: 'none', cursor: 'pointer'
+              }}
+            >
+              <option value="python">Python 3</option>
+              <option value="javascript">JavaScript</option>
+              <option value="go">Go</option>
+            </select>
+
+            {/* History Logs */}
+            <button onClick={onToggleHistory} className="btn-outline-white" aria-label="Open Execution History Logs" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', minHeight: '36px' }}>
+              <History size={14} aria-hidden="true" /> Logs
+            </button>
+
+            {/* AI Assistant */}
+            <button onClick={onToggleAI} className="btn-outline-white" aria-label="Open AI Assistant Drawer" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', minHeight: '36px' }}>
+              <Sparkles size={14} color="#10b981" aria-hidden="true" /> AI
+            </button>
+
+            {/* Run Code */}
+            <button onClick={onRunCode} className="btn-solid-white" aria-label="Execute Code in Sandbox Container" disabled={isRunning} style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', minHeight: '36px' }}>
+              <Play size={14} fill="black" aria-hidden="true" /> {isRunning ? 'Running...' : 'Run Code'}
+            </button>
+          </>
+        )}
+
+        {/* User Auth Profile */}
         {user ? (
           <div style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: 'rgba(255,255,255,0.05)', padding: '0.35rem 0.75rem', borderRadius: '20px',
-            border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.85rem'
+            background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: '16px',
+            border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.8rem'
           }}>
-            <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: user.avatar_color || '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>
+            <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: user.avatar_color || '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#000' }}>
               {user.display_name ? user.display_name[0].toUpperCase() : 'U'}
             </div>
             <span>{user.display_name}</span>
           </div>
         ) : (
-          <button onClick={onOpenAuth} className="btn-secondary" aria-label="Open Sign In Dialog" style={{ padding: '0.45rem 0.8rem', fontSize: '0.85rem' }}>
-            <User size={16} aria-hidden="true" />
-            <span>Sign In</span>
+          <button onClick={onOpenAuth} className="btn-outline-white" aria-label="Open Sign In Dialog" style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem', minHeight: '36px' }}>
+            <User size={14} aria-hidden="true" /> Sign In
           </button>
         )}
-      </nav>
+      </div>
     </header>
   )
 }

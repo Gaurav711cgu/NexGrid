@@ -7,8 +7,12 @@
 }
 
 body {
-  background-color: var(--bg-canvas);
-  color: var(--text-primary);
+  background-color: var(--color-black);
+  background-image: 
+    linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
+  background-size: 64px 64px;
+  color: var(--color-text-white);
   font-family: var(--font-body);
   overflow-x: hidden;
   min-height: 100vh;
@@ -19,107 +23,108 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
 }
 
-/* WCAG AA Visible Keyboard Focus State */
+/* WCAG AA Visible Focus Ring */
 :focus-visible {
   outline: none;
-  box-shadow: var(--focus-ring);
+  box-shadow: 0 0 0 2px var(--color-black), 0 0 0 4px var(--color-text-white);
   border-radius: var(--radius-sm);
 }
 
-/* Glassmorphism Panel Container */
-.glass-panel {
-  background: rgba(17, 24, 39, 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+/* Orggle-Style Obsidian Display Card */
+.display-card {
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
 }
 
-/* Interactive Component Buttons (44px min touch target) */
-.btn-primary {
-  background: linear-gradient(135deg, var(--color-indigo-500), var(--color-indigo-600));
-  color: #ffffff;
-  font-family: var(--font-body);
-  font-weight: 600;
-  min-height: var(--min-touch-target);
-  padding: 0.6rem 1.25rem;
+.display-card-inner {
+  background: var(--color-card-inner);
+  border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
-  border: none;
+}
+
+/* Orggle Monospace Capsule Badge */
+.badge-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* Solid White Primary Action Button */
+.btn-solid-white {
+  background-color: #ffffff;
+  color: #000000;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  min-height: var(--min-touch-target);
+  padding: 0.6rem 1.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #ffffff;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
+  gap: 8px;
+  transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
-.btn-primary:hover {
+.btn-solid-white:hover {
+  background-color: #e5e5e5;
   transform: translateY(-1px);
-  box-shadow: 0 0 25px rgba(99, 102, 241, 0.5);
 }
 
-.btn-secondary {
-  background: var(--bg-surface);
-  color: var(--text-primary);
+/* Outlined Secondary Button */
+.btn-outline-white {
+  background-color: transparent;
+  color: #ffffff;
   font-family: var(--font-body);
   font-weight: 500;
+  font-size: 0.9rem;
   min-height: var(--min-touch-target);
-  padding: 0.6rem 1.25rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-subtle);
+  padding: 0.6rem 1.4rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  gap: 8px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.btn-secondary:hover {
-  background: var(--bg-surface-hover);
-  border-color: var(--text-secondary);
+.btn-outline-white:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
-.btn-success {
-  background: linear-gradient(135deg, var(--color-emerald-500), #34d399);
-  color: #ffffff;
-  font-family: var(--font-body);
-  font-weight: 600;
-  min-height: var(--min-touch-target);
-  padding: 0.6rem 1.25rem;
-  border-radius: var(--radius-md);
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+/* Live Green Indicator Dot */
+.live-dot-green {
+  width: 7px;
+  height: 7px;
+  background-color: var(--color-emerald);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--color-emerald);
 }
 
-.btn-success:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.5);
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot-green {
+    animation: pulse-dot 2s infinite ease-in-out;
+  }
 }
 
-/* Inputs & Form Elements */
-.input-field {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  padding: 0.65rem 1rem;
-  min-height: var(--min-touch-target);
-  border-radius: var(--radius-md);
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  width: 100%;
-  outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.input-field:focus {
-  border-color: var(--border-focus);
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.35);
+@keyframes pulse-dot {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.8; }
 }
 
 /* Custom Scrollbar */
@@ -128,33 +133,12 @@ h1, h2, h3, h4, h5, h6 {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-canvas);
+  background: var(--color-black);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-slate-700);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
-/* Live Dot Animation with Reduced Motion Support */
-@keyframes pulse-glow {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  50% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(0.95); opacity: 0.8; }
-}
-
-.live-dot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--color-emerald-500);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--color-emerald-500);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .live-dot {
-    animation: pulse-glow 2s infinite ease-in-out;
-  }
+  background: rgba(255, 255, 255, 0.3);
 }
