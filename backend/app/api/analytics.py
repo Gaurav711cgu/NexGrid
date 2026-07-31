@@ -26,7 +26,7 @@ async def get_room_analytics(room_id: str, user: dict = Depends(get_current_user
         language,
         COUNT(*) AS total_executions,
         SUM(CASE WHEN exit_code = 0 THEN 1 ELSE 0 END) AS successful_runs,
-        SUM(CASE WHEN blocked = 1 THEN 1 ELSE 0 END) AS blocked_runs,
+        SUM(CASE WHEN blocked = TRUE THEN 1 ELSE 0 END) AS blocked_runs,
         ROUND(AVG(execution_time_ms)::numeric, 2) AS avg_latency_ms,
         ROUND(MAX(avg_lang_latency_ms)::numeric, 2) AS overall_lang_avg_ms
     FROM RankedExecutions

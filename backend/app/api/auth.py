@@ -88,18 +88,16 @@ async def logout(request: Request, response: Response, user: dict = Depends(get_
     Zero-Trust Session Revocation:
     Blacklists both access token JTI and refresh token JTI in Redis.
     """
-    # Blacklist refresh cookie JTI if present
     refresh_token = request.cookies.get(COOKIE_NAME)
     if refresh_token:
         try:
-            refresh_payload = jwt.decode(refresh_token, options={"verify_signature": False})
+            refresh_payload = await decode_token(refresh_token, expected_type="refresh")
             jti = refresh_payload.get("jti")
             if jti:
-                await blacklist_jti(jti)
+                await blacklist_jti(jti, ttl_seconds=60 * 60 * 24 * 7)
         except Exception:
-            pass
+            pass  # token invalid/expired — still proceed with logout
 
-    # Blacklist current access token JTI
     if "jti" in user:
         await blacklist_jti(user["jti"])
 

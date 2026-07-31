@@ -5,6 +5,7 @@ import asyncio
 import hashlib
 import tempfile
 import logging
+import ast as python_ast
 from pathlib import Path
 from typing import Optional, Dict, Any
 from app.models.schemas import ExecutionResult
@@ -17,7 +18,7 @@ class ExecutionSandbox:
     """
     Isolated Code Execution Engine.
     Defense in depth layers:
-    1. Static AST / pattern blocking layer (fork bombs, system calls, network sockets)
+    1. Static AST Security Analysis (Python ast module walking node trees for imports, builtins, and dangerous methods)
     2. Subprocess isolation (independent child process)
     3. POSIX resource limit enforcement (CPU time, memory, file descriptors, max processes)
     4. Timeout enforcement (asyncio.wait_for)
@@ -31,11 +32,6 @@ class ExecutionSandbox:
     }
 
     BLOCKED_PATTERNS = {
-        "python": [
-            "import os", "import subprocess", "import socket", "import sys",
-            "__import__", "eval(", "exec(", "open(", "os.system", "subprocess.run",
-            "shutil", "import pty"
-        ],
         "javascript": [
             "require('fs')", 'require("fs")', "require('child_process')",
             'require("child_process")', "process.exit", "eval(", "Function("
@@ -61,7 +57,7 @@ class ExecutionSandbox:
                 blocked=True
             )
 
-        # 1. Static Security Analysis
+        # 1. Static Security Analysis (Real AST Analysis for Python)
         blocked_reason = self._check_dangerous_code(code, language)
         if blocked_reason:
             EXECUTION_BLOCKED.labels(reason=blocked_reason, language=language).inc()
@@ -150,23 +146,58 @@ class ExecutionSandbox:
     def _set_posix_limits(self):
         """Pre-exec hook setting POSIX resource limits on child process."""
         try:
-            # CPU time limit (soft 5s, hard 10s)
             resource.setrlimit(resource.RLIMIT_CPU, (5, 10))
-            # Memory limit (128MB)
             memory_bytes = settings.MAX_MEMORY_MB * 1024 * 1024
             resource.setrlimit(resource.RLIMIT_AS, (memory_bytes, memory_bytes))
-            # File descriptor limit (max 64 open files)
             resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
-            # Max child processes (prevent fork bomb)
             resource.setrlimit(resource.RLIMIT_NPROC, (10, 10))
         except Exception:
-            pass  # Handled gracefully if platform restricts setrlimit modification
+            pass
 
     def _check_dangerous_code(self, code: str, language: str) -> Optional[str]:
+        if language == "python":
+            return self._ast_check_python(code)
         patterns = self.BLOCKED_PATTERNS.get(language, [])
         for pattern in patterns:
             if pattern in code:
                 return pattern
+        return None
+
+    def _ast_check_python(self, code: str) -> Optional[str]:
+        """Real AST-based security analysis for Python using stdlib ast module."""
+        try:
+            tree = python_ast.parse(code)
+        except SyntaxError as e:
+            return f"syntax_error:{e}"
+
+        BLOCKED_MODULES = {
+            "os", "subprocess", "socket", "sys", "pty", "shutil",
+            "ctypes", "importlib", "pickle", "marshal"
+        }
+        BLOCKED_BUILTINS = {
+            "eval", "exec", "__import__", "compile", "open",
+            "breakpoint", "globals", "locals", "vars"
+        }
+
+        for node in python_ast.walk(tree):
+            if isinstance(node, python_ast.Import):
+                for alias in node.names:
+                    root = alias.name.split(".")[0]
+                    if root in BLOCKED_MODULES:
+                        return f"blocked_import:{alias.name}"
+
+            if isinstance(node, python_ast.ImportFrom):
+                if node.module and node.module.split(".")[0] in BLOCKED_MODULES:
+                    return f"blocked_import_from:{node.module}"
+
+            if isinstance(node, python_ast.Call):
+                if isinstance(node.func, python_ast.Name):
+                    if node.func.id in BLOCKED_BUILTINS:
+                        return f"blocked_builtin:{node.func.id}"
+                if isinstance(node.func, python_ast.Attribute):
+                    if node.func.attr in {"system", "popen", "spawn", "exec", "execv", "execl", "fork", "run", "call"}:
+                        return f"blocked_method:{node.func.attr}"
+
         return None
 
 sandbox_engine = ExecutionSandbox()

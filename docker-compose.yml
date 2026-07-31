@@ -38,7 +38,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/nexagrid
       REDIS_URL: redis://redis:6379/0
-      JWT_SECRET: nexagrid-faang-secret-key-super-secure-2026
+      JWT_SECRET: ${JWT_SECRET:-nexagrid-faang-secret-key-super-secure-2026}
     ports:
       - "8000:8000"
     depends_on:

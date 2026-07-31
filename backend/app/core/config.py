@@ -6,10 +6,10 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     API_PREFIX: str = "/api"
     
-    # Auth
+    # Auth (Short-lived 15m access token + 7d refresh cookie)
     JWT_SECRET: str = os.getenv("JWT_SECRET", "nexagrid-faang-secret-key-super-secure-2026")
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15  # 15 minutes as documented in README
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/nexagrid")

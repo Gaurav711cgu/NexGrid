@@ -4,21 +4,38 @@ from app.core.redis import redis_client
 
 class SlidingWindowRateLimiter:
     """
-    Sliding window rate limiter using Redis hash & timestamp keys.
-    Limits execution, auth attempts, and WS handshakes per IP/User.
+    True Sliding Window Rate Limiter using Redis Sorted Set (ZADD/ZREMRANGEBYSCORE pipeline).
+    Prevents window-boundary burst attacks.
     """
-    def __init__(self, requests_limit: int = 30, window_seconds: int = 60):
+    def __init__(self, requests_limit: int = 60, window_seconds: int = 60):
         self.limit = requests_limit
         self.window = window_seconds
 
     async def is_allowed(self, identifier: str) -> Tuple[bool, int]:
-        now = int(time.time())
-        key = f"rate_limit:{identifier}:{now // self.window}"
-        current = await redis_client.get(key)
-        count = int(current) if current else 0
+        now = time.time()
+        window_start = now - self.window
+        key = f"ratelimit:sw:{identifier}"
+
+        try:
+            if not redis_client.use_fallback and redis_client.redis:
+                async with redis_client.redis.pipeline() as pipe:
+                    pipe.zremrangebyscore(key, 0, window_start)
+                    pipe.zcard(key)
+                    pipe.zadd(key, {str(now): now})
+                    pipe.expire(key, int(self.window * 2))
+                    results = await pipe.execute()
+                count = results[1]
+            else:
+                # Fallback in-memory rate limiting
+                count_key = f"{key}:count"
+                current = await redis_client.get(count_key)
+                count = int(current) if current else 0
+                await redis_client.set(count_key, count + 1, ex=self.window)
+        except Exception:
+            return True, self.limit  # Fail open on Redis error
+
         if count >= self.limit:
             return False, 0
-        await redis_client.set(key, count + 1, ex=self.window * 2)
-        return True, self.limit - (count + 1)
+        return True, self.limit - count - 1
 
 rate_limiter = SlidingWindowRateLimiter(requests_limit=60, window_seconds=60)
