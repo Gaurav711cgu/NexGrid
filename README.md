@@ -33,7 +33,7 @@
 | **Isolated Execution Sandbox** | Multi-language execution engine (Python, JS, Go) featuring static AST security analysis, POSIX `setrlimit` resource bounds (`RLIMIT_AS` 128MB, `RLIMIT_CPU` 5s, `RLIMIT_NPROC` 10), and a 10s execution cap. |
 | **Advanced Relational Architecture** | Declarative range-partitioned `execution_logs` table by `executed_at`, `metadata JSONB` GIN indexing, and `(room_id, executed_at DESC, id DESC)` composite index for O(1) cursor pagination. |
 | **Resilient AI Pair Programmer** | Token-by-token streaming code completions, error diagnostics, and code explanations protected by an active Circuit Breaker pattern (`CLOSED` / `OPEN` / `HALF_OPEN`). |
-| **Zero-Trust Security & Rate Limiting** | Sliding window rate limiting via Redis Lua scripts, JWT bearer token authentication, bcrypt password hashing, and OWASP security response headers. |
+| **Zero-Trust Auth & Revocation** | Dual-Token Pair (15m Access JWT + 7d `HttpOnly; SameSite=Lax` Refresh Cookie), Refresh Token Rotation, and $O(1)$ Redis JTI blacklist revocation on logout. |
 
 ---
 
@@ -87,7 +87,7 @@
                                         ▼
                          ┌─────────────────────────────┐
                          │  Layer 2: API Gateway       │  FastAPI Async Engine
-                         │  JWT Auth & Rate Limiter    │  Redis Sliding Window
+                         │  Dual-Token & Rate Limiter  │  Redis JTI Blacklist
                          └──────────────┬──────────────┘
                                         │
                  ┌──────────────────────┼──────────────────────┐
@@ -136,7 +136,8 @@ CREATE INDEX idx_exec_logs_metadata_gin ON execution_logs USING gin (metadata js
 | Security Layer | Scope | Defensive Countermeasure Implemented |
 | :--- | :--- | :--- |
 | **Edge / Network** | DDoS & Abuse Prevention | Redis sliding window rate limiter (60 req/min per user/IP) |
-| **Authentication** | Session Management | Stateless JWT Access Tokens (HS256) with bcrypt password hashing |
+| **Authentication** | Session Management | Dual-token pair: Short-lived access JWT (15m) + `HttpOnly; SameSite=Lax` refresh cookie (7d) |
+| **Revocation** | Session Termination | Redis $O(1)$ JTI blacklist checking on every authenticated request |
 | **Code Execution** | Subprocess Isolation | Static AST filter blocking system calls (`os.system`, `subprocess`, `child_process`, `eval`) |
 | **OS Resource Limits** | Memory & Process Exhaustion | POSIX `setrlimit` bounds (`RLIMIT_AS` 128MB, `RLIMIT_CPU` 5s, `RLIMIT_NPROC` 10 max child processes) |
 | **Data Protection** | Transport & Headers | OWASP Response Headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `CORS`) |
@@ -149,8 +150,10 @@ CREATE INDEX idx_exec_logs_metadata_gin ON execution_logs USING gin (metadata js
 
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Register new user account with hashed password | `Public (Unauthenticated)` |
-| `POST` | `/api/auth/login` | Validate credentials & issue JWT token | `Public (Unauthenticated)` |
+| `POST` | `/api/auth/register` | Register account & issue access token + HttpOnly cookie | `Public (Unauthenticated)` |
+| `POST` | `/api/auth/login` | Validate credentials & issue token pair + HttpOnly cookie | `Public (Unauthenticated)` |
+| `POST` | `/api/auth/refresh` | Rotate refresh token cookie & blacklist previous JTI | `HttpOnly Cookie` |
+| `POST` | `/api/auth/logout` | Revoke session and blacklist access & refresh JTIs in Redis | `Bearer Token` |
 | `GET` | `/api/auth/me` | Retrieve current authenticated user profile | `Bearer Token` |
 | `POST` | `/api/rooms` | Create new collaborative room with code | `Bearer Token` |
 | `GET` | `/api/rooms/{code}` | Retrieve room configuration & join check | `Bearer Token` |
@@ -159,33 +162,29 @@ CREATE INDEX idx_exec_logs_metadata_gin ON execution_logs USING gin (metadata js
 | `GET` | `/api/analytics/room/{id}/summary` | Retrieve SQL analytical telemetry window metrics | `Bearer Token` |
 
 <details>
-<summary><b>POST /api/execution/{room_id}/run — Request & Response Payload Example</b></summary>
+<summary><b>POST /api/auth/login — Request & Response Payload Example</b></summary>
 
 **Request:**
 ```json
 {
-  "code": "def solution():\n    return sum([x * 2 for x in range(10)])\n\nprint(solution())",
-  "language": "python",
-  "stdin": ""
+  "email": "engineer@company.com",
+  "password": "ProductionPassword123!"
 }
 ```
 
 **Response `200 OK`:**
 ```json
 {
-  "stdout": "90\n",
-  "stderr": "",
-  "exit_code": 0,
-  "execution_time_ms": 182.5,
-  "blocked": false,
-  "metadata": {
-    "code_hash": "a4f8e9b2c3d1...",
-    "memory_limit_mb": 128,
-    "timeout_seconds": 10,
-    "output_bytes": 3
+  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
+  "token_type": "bearer",
+  "user": {
+    "id": "a4f8e9b2-c3d1...",
+    "email": "engineer@company.com",
+    "display_name": "Engineer"
   }
 }
 ```
+`Header Set-Cookie: nexagrid_refresh_token=...; HttpOnly; SameSite=Lax`
 </details>
 
 ---
@@ -195,7 +194,7 @@ CREATE INDEX idx_exec_logs_metadata_gin ON execution_logs USING gin (metadata js
 Execute the automated backend test suite, security static analysis, and execution sandbox verification:
 
 ```bash
-# 1. Run unit, security, and sandbox execution tests
+# 1. Run unit, dual-token security, and sandbox execution tests
 PYTHONPATH=backend pytest backend/tests/test_backend.py -v
 
 # 2. Inspect Prometheus telemetry exporter endpoint

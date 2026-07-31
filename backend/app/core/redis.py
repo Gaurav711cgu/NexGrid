@@ -95,66 +95,81 @@ class RedisClientManager:
         if self.redis:
             await self.redis.close()
 
+    def _ensure_active(self):
+        if self.redis is None:
+            self.use_fallback = True
+
     async def hset(self, key: str, field: str, value: str):
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.hset(key, field, value)
         await self.redis.hset(key, field, value)
 
     async def hgetall(self, key: str) -> Dict[bytes, bytes]:
+        self._ensure_active()
         if self.use_fallback:
             res = await self.fallback.hgetall(key)
             return {k.encode(): v.encode() for k, v in res.items()}
         return await self.redis.hgetall(key)
 
     async def hdel(self, key: str, field: str):
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.hdel(key, field)
         await self.redis.hdel(key, field)
 
     async def hlen(self, key: str) -> int:
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.hlen(key)
         return await self.redis.hlen(key)
 
     async def lpush(self, key: str, value: bytes):
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.lpush(key, value)
         await self.redis.lpush(key, value)
 
     async def llen(self, key: str) -> int:
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.llen(key)
         return await self.redis.llen(key)
 
     async def lrange(self, key: str, start: int, stop: int) -> List[bytes]:
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.lrange(key, start, stop)
         return await self.redis.lrange(key, start, stop)
 
     async def set(self, key: str, value: Any, ex: Optional[int] = None):
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.set(key, value, ex)
         await self.redis.set(key, value, ex=ex)
 
     async def get(self, key: str) -> Optional[Any]:
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.get(key)
         return await self.redis.get(key)
 
     async def publish(self, channel: str, message: bytes):
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.publish(channel, message)
         await self.redis.publish(channel, message)
 
     async def acquire_lock(self, lock_name: str, timeout_ms: int = 5000) -> bool:
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.acquire_lock(lock_name, timeout_ms)
-        # Redis SET NX PX distributed lock pattern
         val = "1"
         res = await self.redis.set(f"lock:{lock_name}", val, px=timeout_ms, nx=True)
         return bool(res)
 
     async def release_lock(self, lock_name: str):
+        self._ensure_active()
         if self.use_fallback:
             return await self.fallback.release_lock(lock_name)
         await self.redis.delete(f"lock:{lock_name}")
