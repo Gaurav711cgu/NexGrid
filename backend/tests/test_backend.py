@@ -55,3 +55,34 @@ def test_sandbox_blocked_dangerous_code():
     res = asyncio.run(sandbox_engine.execute(code, "python"))
     assert res.blocked is True
     assert "Security Policy Violation" in res.stderr
+
+def test_mcp_tool_list():
+    response = client.post("/api/mcp/tools/list")
+    assert response.status_code == 200
+    tools = response.json()["tools"]
+    tool_names = [t["name"] for t in tools]
+    assert "nexgrid_create_room" in tool_names
+    assert "nexgrid_execute_sandbox" in tool_names
+    assert "nexgrid_get_analytics" in tool_names
+
+def test_mcp_execute_sandbox_tool():
+    req = {
+        "name": "nexgrid_execute_sandbox",
+        "arguments": {"code": "print('MCP Execution Success')", "language": "python"}
+    }
+    response = client.post("/api/mcp/tools/execute", json=req)
+    assert response.status_code == 200
+    content = response.json()["content"][0]["text"]
+    assert "MCP Execution Success" in content
+
+def test_sandbox_rust_security_check():
+    code = "use std::process::Command;\nfn main() { Command::new('ls').output(); }"
+    res = asyncio.run(sandbox_engine.execute(code, "rust"))
+    assert res.blocked is True
+    assert "Security Policy Violation" in res.stderr
+
+def test_sandbox_java_security_check():
+    code = "public class Main { public static void main(String[] args) { Runtime.getRuntime().exec(\"ls\"); } }"
+    res = asyncio.run(sandbox_engine.execute(code, "java"))
+    assert res.blocked is True
+    assert "Security Policy Violation" in res.stderr

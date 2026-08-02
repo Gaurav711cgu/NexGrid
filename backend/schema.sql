@@ -58,7 +58,19 @@ CREATE TABLE IF NOT EXISTS room_snapshots (
 
 CREATE INDEX IF NOT EXISTS idx_snapshots_room_version ON room_snapshots(room_id, op_count DESC);
 
--- 4. Execution Logs Table (Partitioned Declaratively by Range on executed_at)
+-- 4. Session Replay Events Table (CRDT trajectory recording)
+CREATE TABLE IF NOT EXISTS room_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
+    seq_num INT NOT NULL,
+    event_type VARCHAR(50) DEFAULT 'crdt_update',
+    payload TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_room_events_seq ON room_events(room_id, seq_num ASC);
+
+-- 5. Execution Logs Table (Partitioned Declaratively by Range on executed_at)
 CREATE TABLE IF NOT EXISTS execution_logs (
     id UUID DEFAULT uuid_generate_v4(),
     room_id UUID NOT NULL,

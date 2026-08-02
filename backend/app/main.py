@@ -42,11 +42,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.api import auth, rooms, execution, analytics, mcp
+
 # Register REST Routers
 app.include_router(auth.router, prefix=settings.API_PREFIX)
 app.include_router(rooms.router, prefix=settings.API_PREFIX)
 app.include_router(execution.router, prefix=settings.API_PREFIX)
 app.include_router(analytics.router, prefix=settings.API_PREFIX)
+app.include_router(mcp.router, prefix=settings.API_PREFIX)
 
 # Register WebSocket Handlers
 app.include_router(collab_ws.router)

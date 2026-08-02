@@ -1,8 +1,10 @@
 import uuid
 import secrets
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel
+
 from app.models.schemas import CreateRoomRequest, RoomResponse, PaginatedExecutionLogs
 from app.auth.security import get_current_user
 from app.core.database import db
@@ -12,8 +14,15 @@ router = APIRouter(prefix="/rooms", tags=["Rooms"])
 BOILERPLATE = {
     "python": "def solution():\n    print('Hello from NexaGrid real-time collaboration!')\n\nsolution()\n",
     "javascript": "function solution() {\n    console.log('Hello from NexaGrid real-time collaboration!');\n}\n\nsolution();\n",
-    "go": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello from NexaGrid real-time collaboration!\")\n}\n"
+    "go": "package main\n\nimport \"fmt\"\n\nfunc main() {\n    fmt.Println(\"Hello from NexaGrid real-time collaboration!\")\n}\n",
+    "rust": "fn main() {\n    println!(\"Hello from NexaGrid real-time collaboration!\");\n}\n",
+    "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"Hello from NexaGrid real-time collaboration!\");\n    }\n}\n"
 }
+
+class RecordEventRequest(BaseModel):
+    seq_num: int
+    event_type: str = "crdt_update"
+    payload: str
 
 @router.post("", response_model=RoomResponse, status_code=201)
 async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_user)):
@@ -61,6 +70,50 @@ async def get_room_by_code(code: str, user: dict = Depends(get_current_user)):
         is_public=bool(room["is_public"]),
         initial_code=room["initial_code"] or ""
     )
+
+@router.post("/{room_id}/events")
+async def record_room_event(
+    room_id: str,
+    req: RecordEventRequest,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Session Recording Engine: Records CRDT operation events for session playback.
+    """
+    event_id = str(uuid.uuid4())
+    await db.execute(
+        """INSERT INTO room_events (id, room_id, seq_num, event_type, payload, created_at)
+           VALUES ($1, $2, $3, $4, $5, $6)""",
+        event_id, room_id, req.seq_num, req.event_type, req.payload, datetime.utcnow().isoformat()
+    )
+    return {"status": "recorded", "event_id": event_id, "seq_num": req.seq_num}
+
+@router.get("/{room_id}/replay")
+async def get_room_replay(
+    room_id: str,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Session Playback Engine: Fetches ordered CRDT operation sequence for session playback.
+    """
+    rows = await db.fetch(
+        "SELECT id, room_id, seq_num, event_type, payload, created_at FROM room_events WHERE room_id = $1 ORDER BY seq_num ASC",
+        room_id
+    )
+    return {
+        "room_id": room_id,
+        "total_events": len(rows),
+        "events": [
+            {
+                "id": str(r["id"]),
+                "seq_num": r["seq_num"],
+                "event_type": r["event_type"],
+                "payload": r["payload"],
+                "created_at": str(r["created_at"])
+            }
+            for r in rows
+        ]
+    }
 
 @router.get("/{room_id}/history", response_model=PaginatedExecutionLogs)
 async def get_room_execution_history(

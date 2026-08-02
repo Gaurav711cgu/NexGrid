@@ -16,9 +16,9 @@ logger = logging.getLogger("nexagrid.sandbox")
 
 class ExecutionSandbox:
     """
-    Isolated Code Execution Engine.
+    Isolated Multi-Language Code Execution Engine (Python, JS, Go, Rust, Java).
     Defense in depth layers:
-    1. Static AST Security Analysis (Python ast module walking node trees for imports, builtins, and dangerous methods)
+    1. Static AST/Pattern Security Analysis
     2. Subprocess isolation (independent child process)
     3. POSIX resource limit enforcement (CPU time, memory, file descriptors, max processes)
     4. Timeout enforcement (asyncio.wait_for)
@@ -26,9 +26,11 @@ class ExecutionSandbox:
     """
     
     SUPPORTED_LANGUAGES = {
-        "python": {"runner": "python3", "extension": ".py"},
-        "javascript": {"runner": "node", "extension": ".js"},
-        "go": {"runner": "go run", "extension": ".go"},
+        "python": {"runner": "python3", "extension": ".py", "compile": False},
+        "javascript": {"runner": "node", "extension": ".js", "compile": False},
+        "go": {"runner": "go run", "extension": ".go", "compile": False},
+        "rust": {"runner": "rustc", "extension": ".rs", "compile": True},
+        "java": {"runner": "javac", "extension": ".java", "compile": True},
     }
 
     BLOCKED_PATTERNS = {
@@ -38,6 +40,12 @@ class ExecutionSandbox:
         ],
         "go": [
             "os/exec", "syscall", "unsafe"
+        ],
+        "rust": [
+            "std::process::Command", "std::fs", "unsafe {", "raw_pointers"
+        ],
+        "java": [
+            "Runtime.getRuntime()", "ProcessBuilder", "java.lang.reflect", "System.exit"
         ]
     }
 
@@ -51,13 +59,13 @@ class ExecutionSandbox:
         if language not in self.SUPPORTED_LANGUAGES:
             return ExecutionResult(
                 stdout="",
-                stderr=f"Language '{language}' is not supported.",
+                stderr=f"Language '{language}' is not supported. Supported: {list(self.SUPPORTED_LANGUAGES.keys())}",
                 exit_code=-1,
                 execution_time_ms=0,
                 blocked=True
             )
 
-        # 1. Static Security Analysis (Real AST Analysis for Python)
+        # 1. Static Security Analysis (Real AST Analysis for Python & Pattern Check for others)
         blocked_reason = self._check_dangerous_code(code, language)
         if blocked_reason:
             EXECUTION_BLOCKED.labels(reason=blocked_reason, language=language).inc()
@@ -74,14 +82,45 @@ class ExecutionSandbox:
         start_time = time.perf_counter()
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            code_file = Path(tmpdir) / f"main{lang_config['extension']}"
+            file_name = "Main.java" if language == "java" else f"main{lang_config['extension']}"
+            code_file = Path(tmpdir) / file_name
             code_file.write_text(code, encoding="utf-8")
 
             try:
+                # Handle Compiled Languages (Rust, Java) vs Interpreted/Scripted
+                if language == "rust":
+                    binary_path = Path(tmpdir) / "main_bin"
+                    compile_proc = await asyncio.create_subprocess_exec(
+                        "rustc", str(code_file), "-o", str(binary_path),
+                        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=tmpdir
+                    )
+                    c_stdout, c_stderr = await asyncio.wait_for(compile_proc.communicate(), timeout=10)
+                    if compile_proc.returncode != 0:
+                        return ExecutionResult(
+                            stdout="", stderr=c_stderr.decode("utf-8", errors="replace"),
+                            exit_code=compile_proc.returncode, execution_time_ms=0, blocked=False
+                        )
+                    cmd = [str(binary_path)]
+
+                elif language == "java":
+                    compile_proc = await asyncio.create_subprocess_exec(
+                        "javac", str(code_file),
+                        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, cwd=tmpdir
+                    )
+                    c_stdout, c_stderr = await asyncio.wait_for(compile_proc.communicate(), timeout=10)
+                    if compile_proc.returncode != 0:
+                        return ExecutionResult(
+                            stdout="", stderr=c_stderr.decode("utf-8", errors="replace"),
+                            exit_code=compile_proc.returncode, execution_time_ms=0, blocked=False
+                        )
+                    cmd = ["java", "-cp", tmpdir, "Main"]
+
+                else:
+                    cmd = lang_config["runner"].split() + [str(code_file)]
+
                 # 2. Subprocess Execution with OS Resource Limits
                 process = await asyncio.create_subprocess_exec(
-                    *lang_config["runner"].split(),
-                    str(code_file),
+                    *cmd,
                     stdin=asyncio.subprocess.PIPE if stdin else None,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,

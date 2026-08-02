@@ -88,6 +88,11 @@ export default function App() {
     setIsAIOpen(false)
   }
 
+  const handleDebugWithAI = (stderr) => {
+    setIsAIOpen(true)
+    triggerAI("fix_error", currentCode, language, 1, stderr)
+  }
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: '#050505' }}>
       
@@ -136,6 +141,7 @@ export default function App() {
                   executionResult={executionResult}
                   isRunning={isRunning}
                   onClose={() => setExecutionResult(null)}
+                  onDebugWithAI={handleDebugWithAI}
                 />
               </div>
 

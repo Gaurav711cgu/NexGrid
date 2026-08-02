@@ -1,8 +1,10 @@
 import React from 'react'
-import { Terminal, ShieldAlert, CheckCircle2, Clock, Cpu, X } from 'lucide-react'
+import { Terminal, ShieldAlert, CheckCircle2, Clock, Cpu, X, Bug } from 'lucide-react'
 
-export function ExecutionPanel({ executionResult, isRunning, onClose }) {
+export function ExecutionPanel({ executionResult, isRunning, onClose, onDebugWithAI }) {
   if (!executionResult && !isRunning) return null
+
+  const hasError = executionResult && (executionResult.exit_code !== 0 || executionResult.blocked || !!executionResult.stderr)
 
   return (
     <div
@@ -41,13 +43,26 @@ export function ExecutionPanel({ executionResult, isRunning, onClose }) {
           )}
         </div>
 
-        <button
-          onClick={onClose}
-          aria-label="Close Execution Console Panel"
-          style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px', minWidth: '32px', minHeight: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <X size={16} aria-hidden="true" />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {hasError && onDebugWithAI && (
+            <button
+              onClick={() => onDebugWithAI(executionResult.stderr || "Execution Error")}
+              className="btn-solid-white"
+              aria-label="Debug code execution error using AI"
+              style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', minHeight: '30px', background: '#f59e0b', color: '#000', border: 'none' }}
+            >
+              <Bug size={13} aria-hidden="true" /> Debug with AI
+            </button>
+          )}
+
+          <button
+            onClick={onClose}
+            aria-label="Close Execution Console Panel"
+            style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px', minWidth: '32px', minHeight: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
       {/* Output Console Body */}

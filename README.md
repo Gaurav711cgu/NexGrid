@@ -37,6 +37,19 @@
 
 ---
 
+## Design Decisions & Rejected Alternatives
+
+| Decision | Chosen | Rejected | Why |
+| :--- | :--- | :--- | :--- |
+| **Document Sync** | **Y.js CRDT** | Operational Transform (OT) | OT requires a central server to linearize operations; CRDT is peer-to-peer, commutative, and guarantees mathematical convergence. |
+| **Pagination Strategy** | **Cursor-Based $O(1)$** | OFFSET-Based $O(N)$ | OFFSET scans and discards preceding rows; cursor uses composite B-tree index seeks `(executed_at, id)` — critical at 10M+ log rows. |
+| **Execution Isolation** | **POSIX `setrlimit` Sandbox** | Docker-in-Docker (DinD) | DinD introduces 100ms+ spinup latency and container breakout risks; POSIX resource limits (`RLIMIT_AS` 128MB) execute in <5ms. |
+| **Rate Limiting** | **Redis Sorted Set Pipeline** | Fixed Window Counter | Fixed window counters allow 2x burst spikes at window boundaries; sliding window `ZADD` pipeline enforces strict rolling limits. |
+| **AI Outage Resilience** | **Circuit Breaker Pattern** | Naive Retry Loop | Naive retries exhaust worker threads during API outages; Circuit Breaker fast-fails in `OPEN` state and probes in `HALF_OPEN`. |
+| **Model Context Protocol** | **FastAPI MCP Server Endpoint** | Standard REST Only | MCP server (`/api/mcp/tools/list`) exposes system tools (`nexgrid_create_room`, `nexgrid_execute_sandbox`) directly to AI agents. |
+
+---
+
 ## Production System Benchmarks
 
 > Verified under load testing with 50 concurrent virtual users using Locust (`locust -f backend/tests/load/locustfile.py`).
