@@ -1,0 +1,18 @@
+# NexaGrid Code Owners Governance File
+
+# Security & Authentication
+backend/app/auth/                      @gauravkumarnayak
+backend/app/api/auth.py                @gauravkumarnayak
+backend/app/core/security.py           @gauravkumarnayak
+
+# Infrastructure & CI/CD
+infra/                                 @gauravkumarnayak
+docker/                                @gauravkumarnayak
+.github/workflows/                     @gauravkumarnayak
+Dockerfile                             @gauravkumarnayak
+docker-compose.yml                     @gauravkumarnayak
+
+# AI & LLM Engine
+backend/app/services/ai_service.py     @gauravkumarnayak
+backend/app/websocket/ai_ws.py         @gauravkumarnayak
+backend/app/prompts/                   @gauravkumarnayak
