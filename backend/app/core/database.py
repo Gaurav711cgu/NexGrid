@@ -6,17 +6,21 @@ from app.core.config import settings
 
 logger = logging.getLogger("nexagrid.database")
 
+
 class DatabaseManager:
     """
     Unified Async Database Access Layer.
     Supports PostgreSQL via asyncpg with automatic fallback to SQLite for local development.
     """
+
     def __init__(self):
         self.pool: Optional[asyncpg.Pool] = None
         self.use_sqlite: bool = False
         self.sqlite_db_path: str = "nexagrid_dev.db"
 
     async def connect(self):
+        if self.pool or self.use_sqlite:
+            return
         try:
             self.pool = await asyncpg.create_pool(
                 dsn=settings.DATABASE_URL,
@@ -27,9 +31,15 @@ class DatabaseManager:
             )
             logger.info("Connected to PostgreSQL database pool.")
         except Exception as e:
-            logger.warning(f"PostgreSQL connection failed ({e}). Falling back to SQLite local database.")
+            logger.warning(
+                "PostgreSQL connection failed (%s). Falling back to SQLite local database.", e
+            )
             self.use_sqlite = True
             self._init_sqlite()
+
+    async def _ensure_connected(self):
+        if not self.pool and not self.use_sqlite:
+            await self.connect()
 
     def _init_sqlite(self):
         conn = sqlite3.connect(self.sqlite_db_path)
@@ -85,8 +95,10 @@ class DatabaseManager:
     async def close(self):
         if self.pool:
             await self.pool.close()
+            self.pool = None
 
     async def execute(self, query: str, *args) -> str:
+        await self._ensure_connected()
         if self.use_sqlite:
             # Replace PostgreSQL placeholders $1, $2 with SQLite ?
             sql_query = query
@@ -103,6 +115,7 @@ class DatabaseManager:
                 return await conn.execute(query, *args)
 
     async def fetchrow(self, query: str, *args) -> Optional[Dict[str, Any]]:
+        await self._ensure_connected()
         if self.use_sqlite:
             sql_query = query
             for i in range(len(args), 0, -1):
@@ -120,6 +133,7 @@ class DatabaseManager:
                 return dict(row) if row else None
 
     async def fetch(self, query: str, *args) -> List[Dict[str, Any]]:
+        await self._ensure_connected()
         if self.use_sqlite:
             sql_query = query
             for i in range(len(args), 0, -1):
@@ -135,5 +149,6 @@ class DatabaseManager:
             async with self.pool.acquire() as conn:
                 rows = await conn.fetch(query, *args)
                 return [dict(r) for r in rows]
+
 
 db = DatabaseManager()

@@ -113,7 +113,7 @@ async def execute_mcp_tool(
                     "text": f"Execution finished with exit code {res.exit_code}.\nStdout:\n{res.stdout}\nStderr:\n{res.stderr}",
                 }
             ],
-            "result": res.dict(),
+            "result": res.model_dump(),
         }
 
     elif tool_name == "nexgrid_get_analytics":
