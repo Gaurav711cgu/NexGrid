@@ -1,45 +1,77 @@
 from prometheus_client import Gauge, Counter, Histogram
 
-# Active WebSocket connections gauge
+# ─── WebSocket Connections ────────────────────────────────────────────────────
+
+# FIX-6: Removed room_id label — unbounded UUID cardinality crashes Prometheus memory.
+# Use aggregate count across all rooms instead.
 WS_CONNECTIONS_ACTIVE = Gauge(
-    "ws_connections_active",
-    "Active WebSocket connections count",
-    ["room_id"]
+    "ws_connections_active_total",
+    "Total active WebSocket connections across all rooms",
 )
 
-# Total CRDT operations processed
+# Per-room gauge only when you need to debug a specific room (not stored in Prometheus)
+# Use: WS_CONNECTIONS_ACTIVE.set(total_across_all_rooms)
+
+# ─── CRDT Operations ─────────────────────────────────────────────────────────
+
+# FIX-6: Removed room_id label — was a cardinality bomb (1 time-series per room UUID).
 CRDT_OPS_TOTAL = Counter(
     "crdt_ops_total",
-    "Total CRDT operations processed",
-    ["room_id"]
+    "Total CRDT Y.js operations processed across all rooms",
 )
 
-# Code execution latency histogram
+# ─── Code Execution ───────────────────────────────────────────────────────────
+
 EXECUTION_DURATION = Histogram(
     "code_execution_seconds",
     "Code execution duration in seconds",
     ["language"],
-    buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+    buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
 )
 
-# Blocked executions counter (security static analysis triggers)
 EXECUTION_BLOCKED = Counter(
     "code_executions_blocked_total",
-    "Total code executions blocked by static analysis or limits",
-    ["reason", "language"]
+    "Total code executions blocked by static analysis or resource limits",
+    ["reason", "language"],
 )
 
-# AI completion duration histogram
+# Queue depth: how many executions are pending right now
+EXECUTION_QUEUE_DEPTH = Gauge(
+    "code_execution_queue_depth",
+    "Number of code execution requests currently queued or in-flight",
+)
+
+# ─── AI Completion ────────────────────────────────────────────────────────────
+
 AI_COMPLETION_DURATION = Histogram(
     "ai_completion_seconds",
-    "Time to complete AI generation in seconds",
+    "Time to first token from AI model",
     ["model", "action"],
-    buckets=(0.1, 0.3, 0.5, 0.8, 1.2, 2.0, 5.0)
+    buckets=(0.1, 0.3, 0.5, 0.8, 1.2, 2.0, 5.0),
 )
 
-# Room participant peak gauge
+AI_TOKEN_USAGE = Counter(
+    "ai_tokens_total",
+    "Total AI tokens used (input + output)",
+    ["model", "direction"],  # direction: input | output
+)
+
+# ─── Circuit Breaker ──────────────────────────────────────────────────────────
+
+# FIX-6 addition: circuit breaker state for Grafana alert rule
+# Values: 0=CLOSED (healthy), 1=OPEN (failing), 2=HALF_OPEN (probing)
+CIRCUIT_BREAKER_STATE = Gauge(
+    "circuit_breaker_state",
+    "Current state of the AI service circuit breaker (0=CLOSED, 1=OPEN, 2=HALF_OPEN)",
+    ["service"],  # e.g., "anthropic_claude"
+)
+
+# ─── Room Activity ────────────────────────────────────────────────────────────
+
+# FIX-6: Keep room_id label only on short-lived operational gauges that are reset
+# when a room closes — not on ever-growing counters.
 ROOM_PARTICIPANT_COUNT = Gauge(
     "room_participant_count",
     "Current active participants in a room",
-    ["room_id"]
+    ["room_id"],  # Acceptable here: rooms are finite and gauges are cleaned up on close
 )

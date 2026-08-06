@@ -20,9 +20,10 @@ class DatabaseManager:
         try:
             self.pool = await asyncpg.create_pool(
                 dsn=settings.DATABASE_URL,
-                min_size=2,
-                max_size=10,
-                timeout=5.0
+                min_size=5,
+                max_size=20,
+                timeout=10.0,
+                command_timeout=30.0,
             )
             logger.info("Connected to PostgreSQL database pool.")
         except Exception as e:
