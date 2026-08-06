@@ -39,6 +39,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/nexagrid
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET: ${JWT_SECRET:-nexagrid-faang-secret-key-super-secure-2026}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     ports:
       - "8000:8000"
     depends_on:
@@ -46,6 +47,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      jaeger:
+        condition: service_started
 
   frontend:
     build:
@@ -81,6 +84,14 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: nexagrid-jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC receiver
+      - "4318:4318"     # OTLP HTTP receiver
 
 volumes:
   postgres_data:
