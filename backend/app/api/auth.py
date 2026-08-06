@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Response, Request
 from app.models.schemas import RegisterRequest, LoginRequest, AuthResponse
 from app.auth.security import (
@@ -13,14 +13,16 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 COOKIE_NAME = "nexagrid_refresh_token"
 
 def set_refresh_cookie(response: Response, refresh_token: str):
-    """Set secure HttpOnly cookie for refresh token."""
+    """Set secure HttpOnly cookie for refresh token.
+    FIX-3: secure flag is conditionally True in production — no more hardcoded False.
+    """
     response.set_cookie(
         key=COOKIE_NAME,
         value=refresh_token,
         httponly=True,
         max_age=60 * 60 * 24 * 7,  # 7 days
         samesite="lax",
-        secure=False  # Set True in HTTPS production
+        secure=settings.ENVIRONMENT == "production",
     )
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
