@@ -33,6 +33,8 @@ async def lifespan(app: FastAPI):
     await redis_client.close()
 
 
+from app.core.telemetry import telemetry_manager
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -40,6 +42,9 @@ app = FastAPI(
     docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
 )
+
+# Register OpenTelemetry Distributed Tracing
+telemetry_manager.instrument_fastapi(app)
 
 
 # FIX-3: CORS origin allowlist from settings — no more wildcard + credentials combo
