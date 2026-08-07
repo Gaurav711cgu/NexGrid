@@ -117,7 +117,8 @@ class AIService:
                 yield chunk + " "
                 await asyncio.sleep(0.03)
         elif action == "fix_error":
-            fix = f"```python\n# Fixed Execution Code\ntry:\n{code if code else '    print(\"Hello NexaGrid!\")'}\nexcept Exception as e:\n    print(f'Handled error: {{e}}')\n```"
+            fallback_code = code if code else '    print("Hello NexaGrid!")'
+            fix = f"```python\n# Fixed Execution Code\ntry:\n{fallback_code}\nexcept Exception as e:\n    print(f'Handled error: {{e}}')\n```"
             for chunk in fix.split(" "):
                 yield chunk + " "
                 await asyncio.sleep(0.02)
