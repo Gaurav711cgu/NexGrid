@@ -1,6 +1,7 @@
 import uuid
 import json
 import hashlib
+import asyncio
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
@@ -38,17 +39,23 @@ async def execute_code_in_room(
         stdin=req.stdin
     )
 
-    # 3. Log to PostgreSQL with JSONB Telemetry Data
+    # 3. Log to PostgreSQL asynchronously (out-of-band execution log insertion prevents DB connection pool contention)
     exec_id = str(uuid.uuid4())
     code_hash = hashlib.sha256(req.code.encode('utf-8')).hexdigest()
     
-    await db.execute(
-        """INSERT INTO execution_logs (id, room_id, user_id, language, code_hash, stdout, stderr, exit_code, execution_time_ms, blocked, metadata, executed_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
-        exec_id, room_id, user["id"], req.language, code_hash,
-        result.stdout, result.stderr, result.exit_code, result.execution_time_ms,
-        True if result.blocked else False, json.dumps(result.metadata), datetime.now(timezone.utc).isoformat()
-    )
+    async def log_execution_background():
+        try:
+            await db.execute(
+                """INSERT INTO execution_logs (id, room_id, user_id, language, code_hash, stdout, stderr, exit_code, execution_time_ms, blocked, metadata, executed_at)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
+                exec_id, room_id, user["id"], req.language, code_hash,
+                result.stdout, result.stderr, result.exit_code, result.execution_time_ms,
+                True if result.blocked else False, json.dumps(result.metadata), datetime.now(timezone.utc).isoformat()
+            )
+        except Exception as err:
+            pass
+
+    asyncio.create_task(log_execution_background())
 
     return result
 
