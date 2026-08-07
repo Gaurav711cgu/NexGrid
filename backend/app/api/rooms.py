@@ -1,6 +1,6 @@
 import uuid
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
@@ -30,7 +30,7 @@ async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_u
     code = secrets.token_urlsafe(4).upper()[:6]
     lang = (req.language or "python").lower()
     initial_code = req.initial_code or BOILERPLATE.get(lang, BOILERPLATE["python"])
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expires_at = now + timedelta(hours=req.duration_hours or 24)
     name = req.name or f"Room {code}"
 
@@ -84,7 +84,7 @@ async def record_room_event(
     await db.execute(
         """INSERT INTO room_events (id, room_id, seq_num, event_type, payload, created_at)
            VALUES ($1, $2, $3, $4, $5, $6)""",
-        event_id, room_id, req.seq_num, req.event_type, req.payload, datetime.utcnow().isoformat()
+        event_id, room_id, req.seq_num, req.event_type, req.payload, datetime.now(timezone.utc).isoformat()
     )
     return {"status": "recorded", "event_id": event_id, "seq_num": req.seq_num}
 

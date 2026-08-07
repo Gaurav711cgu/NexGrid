@@ -1,7 +1,7 @@
 import uuid
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -47,7 +47,7 @@ async def execute_code_in_room(
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
         exec_id, room_id, user["id"], req.language, code_hash,
         result.stdout, result.stderr, result.exit_code, result.execution_time_ms,
-        True if result.blocked else False, json.dumps(result.metadata), datetime.utcnow().isoformat()
+        True if result.blocked else False, json.dumps(result.metadata), datetime.now(timezone.utc).isoformat()
     )
 
     return result
