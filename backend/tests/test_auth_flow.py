@@ -58,3 +58,17 @@ async def test_auth_token_revocation():
 
     with pytest.raises(Exception):
         await decode_token(token, expected_type="access")
+
+
+def test_auth_ws_ticket_issuance():
+    """Authenticated users can acquire a 60-second single-use WebSocket connection ticket."""
+    user_data = {"id": "ws-user-1", "email": "ws@nexagrid.dev", "display_name": "WS User"}
+    token = create_access_token(user_data)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = client.get("/api/auth/ws-ticket", headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert "ticket" in data
+    assert data["expires_in"] == 60
+

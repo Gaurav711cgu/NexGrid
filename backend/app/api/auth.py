@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, HTTPException, Depends, Response, Request
 from app.models.schemas import RegisterRequest, LoginRequest, AuthResponse
 from app.auth.security import (
@@ -110,3 +110,15 @@ async def logout(request: Request, response: Response, user: dict = Depends(get_
 @router.get("/me")
 async def get_me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+@router.get("/ws-ticket")
+async def get_ws_ticket(user: dict = Depends(get_current_user)):
+    """
+    Zero-Trust WebSocket Ticket Issuer:
+    Issues a short-lived (60-second) single-use cryptographically signed ticket
+    for WebSocket connection handshakes without exposing long-lived access tokens in URLs.
+    """
+    user_data = {"id": user["id"], "email": user["email"], "display_name": user["display_name"]}
+    ticket = create_access_token(user_data, expires_delta=timedelta(seconds=60))
+    return {"ticket": ticket, "expires_in": 60}
+

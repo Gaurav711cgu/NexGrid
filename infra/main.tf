@@ -70,19 +70,39 @@ resource "aws_elasticache_cluster" "nexagrid_redis" {
   port                 = 6379
 }
 
-# 4. Amazon RDS Aurora PostgreSQL Multi-AZ Database Cluster
+# 4. AWS Secrets Manager & Dynamic DB Password Generation
+resource "random_password" "db_master_password" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+resource "aws_secretsmanager_secret" "db_credentials" {
+  name                    = "nexagrid/production/db-credentials"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "db_credentials_val" {
+  secret_id = aws_secretsmanager_secret.db_credentials.id
+  secret_string = jsonencode({
+    username = "nexagrid_admin"
+    password = random_password.db_master_password.result
+  })
+}
+
+# 5. Amazon RDS Aurora PostgreSQL Multi-AZ Database Cluster
 resource "aws_rds_cluster" "nexagrid_postgres" {
   cluster_identifier      = "nexagrid-db-cluster"
   engine                  = "aurora-postgresql"
   engine_version          = "15.4"
   database_name           = "nexagrid"
   master_username         = "nexagrid_admin"
-  master_password         = "SuperSecurePassword2026!"
+  master_password         = random_password.db_master_password.result
   backup_retention_period = 7
   preferred_backup_window = "07:00-09:00"
 }
 
-# 5. AWS ECS Fargate Task Definition & Service
+# 6. AWS ECS Fargate Task Definition & Service
 resource "aws_ecs_cluster" "nexagrid_cluster" {
   name = "nexagrid-ecs-cluster"
 }
@@ -105,8 +125,13 @@ resource "aws_ecs_task_definition" "nexagrid_task" {
           hostPort      = 8000
         }
       ]
+      secrets = [
+        {
+          name      = "DATABASE_PASSWORD"
+          valueFrom = "${aws_secretsmanager_secret.db_credentials.arn}:password::"
+        }
+      ]
       environment = [
-        { name = "DATABASE_URL", value = "postgresql://nexagrid_admin:SuperSecurePassword2026!@${aws_rds_cluster.nexagrid_postgres.endpoint}:5432/nexagrid" },
         { name = "REDIS_URL", value = "redis://${aws_elasticache_cluster.nexagrid_redis.cache_nodes[0].address}:6379/0" }
       ]
     }

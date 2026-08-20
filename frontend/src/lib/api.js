@@ -47,6 +47,7 @@ export const api = {
   logout: () => request('/auth/logout', { method: 'POST' }),
   refreshToken: () => request('/auth/refresh', { method: 'POST' }),
   getMe: () => request('/auth/me'),
+  getWsTicket: () => request('/auth/ws-ticket'),
   createRoom: (data) => request('/rooms', { method: 'POST', body: JSON.stringify(data) }),
   getRoomByCode: (code) => request(`/rooms/${code}`),
   getRoomHistory: (roomId, cursor = null) => request(`/rooms/${roomId}/history${cursor ? `?cursor=${cursor}` : ''}`),
