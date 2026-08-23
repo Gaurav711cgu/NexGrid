@@ -13,9 +13,13 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
 
     # Auth — no fallback, raises ValidationError at startup if missing
+    API_V1_STR: str = "/api/v1"
+    PROJECT_NAME: str = "NexGrid"
+    NEXAGRID_ENV: str = "development"
+    
     JWT_SECRET: str = Field(..., min_length=32)
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
 
     # CORS — set CORS_ALLOWED_ORIGINS=http://localhost:5173,https://yourdomain.com
     ALLOWED_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost:3000"]

@@ -52,7 +52,7 @@
 
 ## Production System Benchmarks
 
-> Verified under load testing with 50 concurrent virtual users using Locust (`locust -f backend/tests/load/locustfile.py`).
+> Measured under Locust load test with 50 concurrent virtual users on a local Docker Compose stack (MacBook Pro M-series, 16 GB RAM). Results represent single-node development environment performance — not a cloud production deployment. To reproduce: `locust -f backend/tests/load/locustfile.py --headless -u 50 -r 5 --run-time 120s --host http://localhost:8000`.
 
 | Metric | Industry SLA Target | Project Result (p50 / p95 / p99) | Engineering Approach |
 | :--- | :--- | :--- | :--- |

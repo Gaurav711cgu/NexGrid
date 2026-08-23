@@ -6,10 +6,16 @@ __pycache__/
 env/
 venv/
 
-# Environment & DB
+# Environment & Secrets
 .env
+.env.*
+!.env.example
 *.db
 *.sqlite3
+
+# Logs
+*.log
+logs/
 
 # Build outputs
 dist/
