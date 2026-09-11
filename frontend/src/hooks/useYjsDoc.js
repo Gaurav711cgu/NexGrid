@@ -62,6 +62,13 @@ export function useYjsDoc(roomId, wsHost = window.location.host) {
 
     const yText = docRef.current.getText('monaco')
     const awareness = providerRef.current.awareness
+    
+    // Set local awareness state for Monaco remote cursor rendering
+    const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16)
+    awareness.setLocalStateField('user', {
+      name: 'User ' + Math.floor(Math.random() * 100),
+      color: randomColor
+    })
 
     if (bindingRef.current) {
       bindingRef.current.destroy()
