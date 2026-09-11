@@ -9,6 +9,7 @@ from app.core.metrics import AI_COMPLETION_DURATION, AI_TOKEN_USAGE
 from app.prompts.registry import prompt_registry
 from app.services.ai_context_service import rag_context_service
 from app.services.ast_chunker import ast_chunker
+from app.services.semantic_cache import semantic_cache
 
 logger = logging.getLogger("nexagrid.ai")
 
@@ -68,25 +69,38 @@ class AIService:
 
         prompt = self._build_prompt(action, code, language, rag_context)
 
-        # 3. Route Request via Primary Cloud Model vs Secondary Local LLM Failover
+        # 3. Check LLM Semantic Cache (Sub-2ms hit, zero token spend)
+        cached_response = semantic_cache.get(prompt)
+        if cached_response:
+            yield cached_response
+            return
+
+        # 4. Route Request via Primary Cloud Model vs Secondary Local LLM Failover
+        response_chunks = []
         if ai_circuit_breaker.allow_request() and self.client:
             try:
                 async for token in self._stream_anthropic(action, prompt):
+                    response_chunks.append(token)
                     yield token
+                if response_chunks:
+                    semantic_cache.set(prompt, "".join(response_chunks))
                 return
             except Exception as e:
                 logger.error(f"Primary Anthropic LLM Provider Error: {e}. Initiating Failover Router.")
                 ai_circuit_breaker.record_failure()
 
-        # 4. Secondary Provider: Local/Self-Hosted LLM Server (Ollama / vLLM API compatible)
+        # 5. Secondary Provider: Local/Self-Hosted LLM Server (Ollama / vLLM API compatible)
         try:
             async for token in self._stream_local_llm(prompt):
+                response_chunks.append(token)
                 yield token
+            if response_chunks:
+                semantic_cache.set(prompt, "".join(response_chunks))
             return
         except Exception as e:
             logger.warning(f"Secondary Local LLM Provider unavailable ({e}). Using deterministic fallback assistant.")
 
-        # 5. Fallback Assistant Engine
+        # 6. Fallback Assistant Engine
         async for token in self._generate_fallback(action, code, language, context):
             yield token
 

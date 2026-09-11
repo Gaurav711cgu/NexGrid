@@ -56,6 +56,17 @@ AI_TOKEN_USAGE = Counter(
     ["model", "direction"],  # direction: input | output
 )
 
+# ─── AI Semantic Cache ────────────────────────────────────────────────────────
+AI_CACHE_HITS = Counter(
+    "ai_cache_hits_total",
+    "Total AI completions served directly from Semantic Cache without API call",
+)
+
+AI_CACHE_MISSES = Counter(
+    "ai_cache_misses_total",
+    "Total AI completions resulting in cache miss and routed to LLM provider",
+)
+
 # ─── Circuit Breaker ──────────────────────────────────────────────────────────
 
 # FIX-6 addition: circuit breaker state for Grafana alert rule

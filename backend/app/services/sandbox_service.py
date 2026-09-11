@@ -336,3 +336,4 @@ class ExecutionSandbox:
 
 
 sandbox_engine = ExecutionSandbox()
+sandbox_service = sandbox_engine

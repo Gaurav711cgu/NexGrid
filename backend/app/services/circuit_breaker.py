@@ -40,9 +40,9 @@ class CircuitBreaker:
 
     def record_failure(self):
         self.failure_count += 1
-        if self.failure_count >= self.failure_threshold:
+        if self.state == CircuitState.HALF_OPEN or self.failure_count >= self.failure_threshold:
             self.state = CircuitState.OPEN
             self.last_state_change = time.time()
-            logger.warning(f"Circuit Breaker tripped to OPEN state after {self.failure_count} failures.")
+            logger.warning(f"Circuit Breaker tripped to OPEN state. (count: {self.failure_count})")
 
 ai_circuit_breaker = CircuitBreaker(failure_threshold=3, recovery_time_seconds=20)
