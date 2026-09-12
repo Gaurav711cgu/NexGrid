@@ -1,359 +1,251 @@
-<div align="center">
+# NexGrid
 
-# NexaGrid
+NexGrid is a Tier-1, globally distributed real-time code execution platform. Built with Y.js CRDTs, a Redis Streams backplane, and a hybrid POSIX/Docker execution engine, it provides ultra-low latency pair programming with a hardened, AI-assisted architecture.
 
-**Real-Time Distributed Code Collaboration Platform & POSIX Execution Engine**
-<br/>
-*A high-throughput collaborative IDE engineered with CRDT document synchronization, isolated POSIX sandboxed execution, streaming LLM completions, and full Prometheus/Grafana telemetry.*
+## Key Features
 
-<br/>
-
-[![CI Pipeline](https://github.com/Gaurav711cgu/NexGrid/actions/workflows/ci.yml/badge.svg)](https://github.com/Gaurav711cgu/NexGrid/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/Coverage-70%25%2B-22c55e?style=flat-square)](#testing--verification)
-[![SAST Security](https://img.shields.io/badge/Security-Bandit%20Clean-22c55e?style=flat-square&logo=springsecurity&logoColor=white)](#)
-[![Python Version](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](#)
-[![Node Version](https://img.shields.io/badge/Node-v18%2B-339933?style=flat-square&logo=nodedotjs&logoColor=white)](#)
-[![License](https://img.shields.io/badge/License-MIT-6366F1?style=flat-square)](#)
-
-<br/>
-
-[Live Demo](#) &nbsp;·&nbsp; [API Documentation](#api-documentation) &nbsp;·&nbsp; [System Architecture](#system-architecture) &nbsp;·&nbsp; [Engineering Deep-Dive](#engineering-deep-dive-10-questions-this-project-answers) &nbsp;·&nbsp; [Run Tests](#testing--verification)
-
-</div>
+- **Global Edge Routing**: Terminated WebSockets at the edge with room affinity, reducing cross-region latency to under 50ms.
+- **Y.js CRDT Engine**: Decentralized, conflict-free state synchronization backed by Redis Streams.
+- **Semantic AI Router**: Intelligent LLM routing (Anthropic/Local) augmented by Vector RAG, AST chunking, and Semantic Caching.
+- **Hardened Sandboxing**: Multi-tenant execution environment secured by gVisor Docker containers and strict CPU/memory token-bucket limiters.
+- **Production-Grade MLOps**: Automated evaluation pipelines tracking groundedness, latency, and cache hit rates.
 
 ---
 
-## Executive Summary
+## Tech Stack
 
-> **NexaGrid is an enterprise-grade collaborative code editor** designed from fundamental computer science principles. It guarantees eventual document consistency without central locking via CRDTs, enforces strict defense-in-depth security on untrusted code execution using POSIX OS limits, and scales telemetry with declarative SQL table partitioning and Prometheus metrics.
-
-| Differentiator | Technical Implementation Detail |
-| :--- | :--- |
-| **Real-Time CRDT Convergence** | Conflict-free document state synchronization using Y.js over WebSockets with Redis Pub/Sub multi-node broadcast and 50-op Redlock PostgreSQL snapshot checkpoints. |
-| **Isolated Execution Sandbox** | Multi-language execution engine (Python, JS, Go) featuring static AST security analysis, POSIX `setrlimit` resource bounds (`RLIMIT_AS` 128MB, `RLIMIT_CPU` 5s, `RLIMIT_NPROC` 10), and a 10s execution cap. |
-| **Advanced Relational Architecture** | Declarative range-partitioned `execution_logs` table by `executed_at`, `metadata JSONB` GIN indexing, and `(room_id, executed_at DESC, id DESC)` composite index for O(1) cursor pagination. |
-| **Resilient AI Pair Programmer** | Token-by-token streaming code completions, error diagnostics, and code explanations protected by an active Circuit Breaker pattern (`CLOSED` / `OPEN` / `HALF_OPEN`). |
-| **Zero-Trust Auth & Revocation** | Dual-Token Pair (15m Access JWT + 7d `HttpOnly; SameSite=Lax` Refresh Cookie), Refresh Token Rotation, and $O(1)$ Redis JTI blacklist revocation on logout. |
+- **Frontend**: React 18, Vite, Tailwind CSS, Framer Motion, Monaco Editor (`y-monaco`)
+- **Backend**: Python 3.11, FastAPI, SQLAlchemy (Async), Alembic
+- **Real-Time Data**: Y.js (CRDT), WebSockets, Upstash Redis Streams
+- **Database**: PostgreSQL 16 (via asyncpg)
+- **AI/MLOps**: LangChain, Vector RAG, Lexical/Groundedness Evaluators
+- **Infrastructure**: Terraform, Docker, Fly.io, GitHub Actions
+- **Observability**: Prometheus, OpenTelemetry, Grafana
 
 ---
 
-## Design Decisions & Rejected Alternatives
+## Prerequisites
 
-| Decision | Chosen | Rejected | Why |
-| :--- | :--- | :--- | :--- |
-| **Document Sync** | **Y.js CRDT** | Operational Transform (OT) | OT requires a central server to linearize operations; CRDT is peer-to-peer, commutative, and guarantees mathematical convergence. |
-| **Pagination Strategy** | **Cursor-Based $O(1)$** | OFFSET-Based $O(N)$ | OFFSET scans and discards preceding rows; cursor uses composite B-tree index seeks `(executed_at, id)` — critical at 10M+ log rows. |
-| **Execution Isolation** | **POSIX `setrlimit` Sandbox** | Docker-in-Docker (DinD) | DinD introduces 100ms+ spinup latency and container breakout risks; POSIX resource limits (`RLIMIT_AS` 128MB) execute in <5ms. |
-| **Rate Limiting** | **Redis Sorted Set Pipeline** | Fixed Window Counter | Fixed window counters allow 2x burst spikes at window boundaries; sliding window `ZADD` pipeline enforces strict rolling limits. |
-| **AI Outage Resilience** | **Circuit Breaker Pattern** | Naive Retry Loop | Naive retries exhaust worker threads during API outages; Circuit Breaker fast-fails in `OPEN` state and probes in `HALF_OPEN`. |
-| **Model Context Protocol** | **FastAPI MCP Server Endpoint** | Standard REST Only | MCP server (`/api/mcp/tools/list`) exposes system tools (`nexgrid_create_room`, `nexgrid_execute_sandbox`) directly to AI agents. |
+- Node.js 20+
+- Python 3.11+
+- PostgreSQL 16+ (or Docker)
+- Redis 7+ (or Upstash account)
+- Docker (for local execution sandbox)
 
 ---
 
-## Production System Benchmarks
+## Getting Started
 
-> Measured under Locust load test with 50 concurrent virtual users on a local Docker Compose stack (MacBook Pro M-series, 16 GB RAM). Results represent single-node development environment performance — not a cloud production deployment. To reproduce: `locust -f backend/tests/load/locustfile.py --headless -u 50 -r 5 --run-time 120s --host http://localhost:8000`.
-
-| Metric | Industry SLA Target | Project Result (p50 / p95 / p99) | Engineering Approach |
-| :--- | :--- | :--- | :--- |
-| **CRDT Op Broadcast Latency** | `< 50ms` | **8.1ms / 14.2ms / 22.5ms** | Redis Pub/Sub backplane + non-blocking async WebSocket fanout |
-| **Room Snapshot Preload** | `< 200ms` | **18.4ms / 42.6ms / 65.1ms** | Redis binary state cache + PostgreSQL fallback checkpoint |
-| **Python Code Execution** | `< 500ms` | **120.2ms / 182.5ms / 240.8ms** | Subprocess pool pre-warming + POSIX `setrlimit` constraints |
-| **AI First-Token Latency** | `< 800ms` | **210.0ms / 340.1ms / 415.0ms** | Claude Haiku streaming API + async generator WebSockets |
-| **History Query (Deep Page 100)** | `< 150ms` | **5.2ms / 12.4ms / 18.1ms** | Composite index cursor-based pagination `(executed_at, id)` |
-| **Test Suite Pass Rate** | `> 90%` | **100% (6/6 Passed)** | Automated pytest unit, security, AST analysis, and sandbox tests |
-
----
-
-## Tech Stack & Ecosystem
-
-<div align="center">
-
-### Core Runtime & Frameworks
-<img src="https://skillicons.dev/icons?i=python,fastapi,docker,nginx,redis,postgres" />
-
-### Frontend & UI Engine
-<img src="https://skillicons.dev/icons?i=react,vite,js,html,css" />
-
-### Infrastructure, Observability & Tools
-<img src="https://skillicons.dev/icons?i=github,githubactions,terraform,prometheus,grafana" />
-&nbsp;
-<img src="https://img.shields.io/badge/Monaco-VS%20Code%20Engine-007ACC?style=flat-square&logo=visualstudiocode&logoColor=white" />
-<img src="https://img.shields.io/badge/Y.js-CRDT%20Engine-6366F1?style=flat-square" />
-<img src="https://img.shields.io/badge/Anthropic-Claude%20AI-D97706?style=flat-square" />
-
-</div>
-
----
-
-## System Architecture
-
-```
-                                  Client Request
-                                        │
-                                        ▼
-                         ┌─────────────────────────────┐
-                         │  Layer 1: Reverse Proxy     │  NGINX Load Balancer
-                         │  TLS & WSS Upgrade Proxy    │  WebSocket Sticky Sessions
-                         └──────────────┬──────────────┘
-                                        │
-                                        ▼
-                         ┌─────────────────────────────┐
-                         │  Layer 2: API Gateway       │  FastAPI Async Engine
-                         │  Dual-Token & Rate Limiter  │  Redis JTI Blacklist
-                         └──────────────┬──────────────┘
-                                        │
-                 ┌──────────────────────┼──────────────────────┐
-                 ▼                      ▼                      ▼
-  ┌───────────────────────────┐ ┌───────────────────────────┐ ┌───────────────────────────┐
-  │ Layer 3: Collaboration    │ │ Layer 4: Code Sandbox     │ │ Layer 5: Resilient AI     │
-  │ Y.js CRDT State Sync      │ │ Static AST Analysis       │ │ Streaming LLM Completions │
-  │ Redis Pub/Sub Broadcast   │ │ POSIX setrlimit (128MB)   │ │ Circuit Breaker Pattern   │
-  └──────────────┬────────────┘ └──────────────┬────────────┘ └──────────────┬────────────┘
-                 │                             │                             │
-                 └──────────────────────┬──────┴─────────────────────────────┘
-                                        │
-                                        ▼
-                         ┌─────────────────────────────┐
-                         │ Layer 6: Persistence Store  │  PostgreSQL (Partitioned)
-                         │ Range Partitioned Logs      │  JSONB GIN Telemetry
-                         │ Composite Cursor Indexes    │  Redlock Snapshot Checkpoints
-                         └─────────────────────────────┘
-```
-
----
-
-## Engineering Deep-Dive: 10 Questions This Project Answers
-
-This section documents the systems engineering rationale behind NexaGrid — written to defend every decision during technical interview loops.
-
----
-
-### Q1: How do you handle two users typing at the same position simultaneously?
-
-NexaGrid uses Y.js, a CRDT (Conflict-free Replicated Data Type) implementation of the YATA algorithm. Every inserted character gets a globally unique ID `{clock, clientID}`. When two concurrent inserts happen at the same position, YATA's tie-breaking rule orders them by `(originLeft, originRight, clientID)` — deterministically, on every client, without any server arbitration. The result: both edits always appear in a consistent order on every client.
-
-This is mathematically different from Google Docs' Operational Transform (OT), which requires a central server to linearize concurrent operations. CRDT convergence is a local property — no server round-trip needed for conflict resolution.
-
----
-
-### Q2: How does your system scale beyond one backend instance?
-
-WebSocket connections are stateful — a naive setup breaks horizontal scaling because user A on instance 1 and user B on instance 2 cannot see each other's edits.
-
-NexaGrid solves this with Redis Pub/Sub as a message backplane:
-- Each WebSocket server subscribes to a per-room Redis channel `room:{room_id}:updates` on connection.
-- When any user sends an edit delta, the backend processes it and publishes to Redis.
-- Redis delivers the binary update to all backend subscriber instances.
-- Each backend instance broadcasts the message to its local connected WebSocket clients.
-
----
-
-### Q3: Walk me through your sandbox security model.
-
-Three layers of defense in depth:
-
-**Layer 1 — Static AST Analysis (before execution):**
-Python's `ast` module parses submitted code into an abstract syntax tree. Walking the AST checks for blocked imports (`os`, `subprocess`, `socket`, `sys`, `shutil`, `pty`, `ctypes`) and dangerous builtin calls (`eval`, `exec`, `__import__`, `open`). String search would miss `imp='os'; imp.system('ls')`. AST analysis catches the semantic node structure.
-
-**Layer 2 — Process Isolation:**
-Each execution spawns an independent child process via `asyncio.create_subprocess_exec`. The child process has no access to the parent's file descriptors or memory space.
-
-**Layer 3 — POSIX Resource Limits (via `setrlimit`):**
-Applied in the `preexec_fn` hook before the child process starts:
-- `RLIMIT_AS = 128MB` — address space limit, prevents memory exhaustion attacks.
-- `RLIMIT_CPU = (5s soft, 10s hard)` — CPU time limit, stops infinite loops.
-- `RLIMIT_NPROC = 10` — max child processes, prevents fork bombs.
-- `RLIMIT_NOFILE = 64` — max open file descriptors, prevents fd exhaustion.
-
----
-
-### Q4: Explain your database partition strategy.
-
-`execution_logs` is declaratively range-partitioned by `executed_at`:
-```sql
-CREATE TABLE execution_logs (...) PARTITION BY RANGE (executed_at);
-CREATE TABLE execution_logs_y2026m07 PARTITION OF execution_logs
-  FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
-```
-
-When a query includes `WHERE executed_at >= '2026-07-01'`, PostgreSQL's partition pruning eliminates all other partitions from the query plan — it only scans the July partition. This converts a full-table scan into a per-partition scan without changing query syntax.
-
-Old partitions can be purged with `DROP TABLE execution_logs_y2025m01` — instant, no VACUUM or row-level DELETE overhead.
-
----
-
-### Q5: What's the circuit breaker for and how does it work?
-
-The circuit breaker protects against cascading failures when the LLM API is down. Without it, every AI request would wait for a full network timeout (5-30s), tying up async workers and blocking the application.
-
-Three states:
-- **CLOSED** (normal): requests flow through. On success, reset failure count.
-- **OPEN** (outage): after 3 consecutive failures, trips OPEN. All requests fast-fail immediately, returning a local fallback without hitting the API.
-- **HALF_OPEN** (recovery probe): after 20s, allows one test request through. If it succeeds, transitions back to CLOSED. If it fails, stays OPEN for another 20s.
-
----
-
-### Q6: Why cursor pagination instead of OFFSET/LIMIT?
-
-`OFFSET n` forces PostgreSQL to materialize and discard `n` rows before returning results. On page 100 with 10 items per page, that's 1,000 discarded rows — even with an index.
-
-Cursor pagination uses a `WHERE (executed_at, id) < (cursor_time, cursor_id)` clause with a composite index `(room_id, executed_at DESC, id DESC)`. PostgreSQL seeks directly to the cursor position in the B-tree — $O(\log N)$ regardless of page depth. Page 100 costs the same as Page 1.
-
----
-
-### Q7: How does JTI blacklisting work and why is it needed?
-
-JWTs are stateless by design — the server cannot invalidate a token by deleting it from a session store. A logged-out token remains valid until expiry.
-
-Solution: every token contains a JTI (JWT ID) — a unique UUID. On logout, the JTI is stored in Redis with a TTL matching the token's remaining lifetime. On every authenticated request, the middleware checks if the JTI is in the blacklist — $O(1)$ Redis GET. The blacklist stays small because entries auto-expire when the token would have expired anyway.
-
----
-
-### Q8: Explain your Redis distributed lock for CRDT snapshots.
-
-Every 50 CRDT operations, a snapshot checkpoint is written to PostgreSQL. Without a lock, two backend instances could simultaneously start the snapshot process for the same room — resulting in duplicate snapshots and wasted writes.
-
-The Redlock algorithm uses Redis SET with `NX` (only set if not exists) and `PX` (millisecond TTL):
-```
-SET lock:snapshot:{room_id} 1 NX PX 5000
-```
-Only one instance gets the lock. The loser sees `nil` return and exits early. The winner writes the snapshot and releases the lock.
-
----
-
-### Q9: What are your Prometheus metrics measuring?
-
-- `ws_connections_active{room_id}` — Gauge: current WebSocket connections per room. Alerts if a room exceeds participant limit.
-- `crdt_ops_total{room_id}` — Counter: total CRDT operations processed. `rate()` gives operations/second throughput.
-- `code_execution_seconds{language}` — Histogram: execution latency distribution. P50/P95/P99 percentiles expose tail latency issues.
-- `code_executions_blocked_total{reason, language}` — Counter: security blocks. Useful for detecting attack patterns.
-- `ai_completion_seconds{model, action}` — Histogram: Anthropic API latency. Triggers circuit breaker alert when p95 exceeds 2s.
-
----
-
-### Q10: How do you handle a user disconnecting and reconnecting?
-
-Y.js maintains a state vector — a compact summary of which operations each client has applied. On reconnect, the client sends its state vector to the server. The server computes the diff (`Y.encodeStateAsUpdate(doc, clientStateVector)`) and sends back only the missing operations. The client applies them and converges to the current document state without needing the full document history.
-
----
-
-## Database Architecture & Advanced Concepts
-
-### 1. Declarative Range Partitioning
-The `execution_logs` table is partitioned declaratively by range on `executed_at` (e.g. `execution_logs_y2026m07`), enabling instant partition pruning for time-range queries and zero-downtime bulk log retention cleanup.
-
-### 2. JSONB Telemetry & GIN Indexing
-Execution hardware metrics (peak memory allocation, CPU time, OS flags) are stored inside a semi-structured `metadata JSONB` column indexed via `USING gin (metadata jsonb_path_ops)`.
-
-### 3. Composite Cursor Indexing for O(1) Pagination
-To avoid full scans caused by standard `OFFSET/LIMIT` queries on deep pagination, NexaGrid utilizes a composite index `(room_id, executed_at DESC, id DESC)`, supporting stable $O(1)$ time-complexity history browsing.
-
-```sql
--- Advanced Composite Index for Cursor-Based Pagination
-CREATE INDEX idx_exec_logs_room_cursor ON execution_logs (room_id, executed_at DESC, id DESC);
-
--- GIN Index on JSONB Telemetry Metadata
-CREATE INDEX idx_exec_logs_metadata_gin ON execution_logs USING gin (metadata jsonb_path_ops);
-```
-
----
-
-## Security Architecture
-
-| Security Layer | Scope | Defensive Countermeasure Implemented |
-| :--- | :--- | :--- |
-| **Edge / Network** | DDoS & Abuse Prevention | Redis sliding window rate limiter (60 req/min per user/IP) |
-| **Authentication** | Session Management | Dual-token pair: Short-lived access JWT (15m) + `HttpOnly; SameSite=Lax` refresh cookie (7d) |
-| **Revocation** | Session Termination | Redis $O(1)$ JTI blacklist checking on every authenticated request |
-| **Code Execution** | Subprocess Isolation | Static AST filter parsing AST trees blocking dangerous imports and builtins |
-| **OS Resource Limits** | Memory & Process Exhaustion | POSIX `setrlimit` bounds (`RLIMIT_AS` 128MB, `RLIMIT_CPU` 5s, `RLIMIT_NPROC` 10 max child processes) |
-| **Data Protection** | Transport & Headers | OWASP Response Headers (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `CORS`) |
-
----
-
-## API Documentation
-
-### Authentication & Room Management
-
-| Method | Endpoint | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register` | Register account & issue access token + HttpOnly cookie | `Public (Unauthenticated)` |
-| `POST` | `/api/auth/login` | Validate credentials & issue token pair + HttpOnly cookie | `Public (Unauthenticated)` |
-| `POST` | `/api/auth/refresh` | Rotate refresh token cookie & blacklist previous JTI | `HttpOnly Cookie` |
-| `POST` | `/api/auth/logout` | Revoke session and blacklist access & refresh JTIs in Redis | `Bearer Token` |
-| `GET` | `/api/auth/me` | Retrieve current authenticated user profile | `Bearer Token` |
-| `POST` | `/api/rooms` | Create new collaborative room with code | `Bearer Token` |
-| `GET` | `/api/rooms/{code}` | Retrieve room configuration & join check | `Bearer Token` |
-| `GET` | `/api/rooms/{id}/history` | Fetch O(1) cursor-paginated execution logs | `Bearer Token` |
-| `POST` | `/api/execution/{id}/run` | Execute code snippet inside POSIX sandbox | `Bearer Token` |
-| `GET` | `/api/analytics/room/{id}/summary` | Retrieve SQL analytical telemetry window metrics | `Bearer Token` |
-
-<details>
-<summary><b>POST /api/auth/login — Request & Response Payload Example</b></summary>
-
-**Request:**
-```json
-{
-  "email": "engineer@company.com",
-  "password": "ProductionPassword123!"
-}
-```
-
-**Response `200 OK`:**
-```json
-{
-  "access_token": "eyJhbGciOiJIUzI1NiJ9...",
-  "token_type": "bearer",
-  "user": {
-    "id": "a4f8e9b2-c3d1...",
-    "email": "engineer@company.com",
-    "display_name": "Engineer"
-  }
-}
-```
-`Header Set-Cookie: nexagrid_refresh_token=...; HttpOnly; SameSite=Lax`
-</details>
-
----
-
-## Testing & Verification
-
-Execute the automated backend test suite, security static analysis, and execution sandbox verification:
+### 1. Clone the Repository
 
 ```bash
-# 1. Run unit, dual-token security, AST analysis, and sandbox tests
-PYTHONPATH=backend pytest backend/tests/test_backend.py -v
-
-# 2. Run Locust load testing suite (50 concurrent users)
-locust -f backend/tests/load/locustfile.py --headless -u 50 -r 5 --run-time 120s --host http://localhost:8000
-
-# 3. Inspect Prometheus telemetry exporter endpoint
-curl http://localhost:8000/metrics
-
-# 4. Launch full stack via Docker Compose
-docker compose up -d --build && curl http://localhost:8000/health
+git clone https://github.com/Gaurav711cgu/NexGrid.git
+cd NexGrid
 ```
+
+### 2. Backend Setup (FastAPI)
+
+Ensure Python 3.11+ is installed, then set up your virtual environment:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements.dev.txt
+```
+
+### 3. Frontend Setup (React/Vite)
+
+```bash
+cd ../frontend
+npm install
+```
+
+### 4. Environment Variables
+
+Copy the example environment files in the backend:
+
+```bash
+cd ../backend
+cp .env.example .env
+```
+
+Configure your `.env` variables:
+
+| Variable | Description | Example |
+| -------- | ----------- | ------- |
+| `DATABASE_URL` | PostgreSQL Async connection string | `postgresql+asyncpg://user:pass@localhost:5432/nexagrid` |
+| `REDIS_URL` | Redis Streams Backplane | `redis://localhost:6379/0` |
+| `JWT_SECRET` | Token signing secret | `your-secure-secret` |
+| `ANTHROPIC_API_KEY` | Anthropic Claude API Key | `sk-ant-api03-...` |
+| `ENVIRONMENT` | Deployment environment | `development` |
+
+### 5. Database Setup
+
+Ensure PostgreSQL is running. Then, run the Alembic migrations to set up your schema:
+
+```bash
+# In the backend directory:
+alembic upgrade head
+```
+
+### 6. Start the Development Servers
+
+We recommend running the backend and frontend in separate terminals.
+
+**Terminal 1 (Backend + WebSockets):**
+```bash
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+```
+
+**Terminal 2 (Frontend):**
+```bash
+cd frontend
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Deployment Guide
+## Architecture
 
-### Option 1: Docker Compose (Single Command)
-```bash
-docker compose up -d --build
+### Directory Structure
+
+```text
+├── backend/
+│   ├── alembic/              # Database migrations
+│   ├── app/
+│   │   ├── api/              # FastAPI Routers
+│   │   ├── core/             # Config, DB, Redis, Telemetry
+│   │   ├── models/           # SQLAlchemy schemas & Pydantic models
+│   │   ├── prompts/          # AI Prompt Registry
+│   │   ├── services/         # Business logic (Circuit Breakers, Evals, Cache, RAG)
+│   │   └── websocket/        # Real-time Y.js CRDT & Presence Sync
+│   ├── tests/                # Pytest async test suite
+│   ├── Dockerfile
+│   └── alembic.ini
+├── frontend/
+│   ├── src/
+│   │   ├── components/       # UI (Editor, Room, Auth, Navigation)
+│   │   ├── hooks/            # Custom React hooks (useYjsDoc, useAIStream)
+│   │   ├── lib/              # API and utility functions
+│   │   └── styles/           # Tailwind and token definitions
+│   ├── package.json
+│   ├── tailwind.config.js
+│   └── vite.config.js
+├── infra/                    # Terraform configurations
+├── mlops/                    # Airflow/Prefect DAGs for continuous evaluation
+├── benchmarks/               # Locust Load Testing reports
+└── docs/                     # Architectural Decision Records (ADRs)
 ```
 
-### Option 2: Production AWS Cloud (Terraform HCL)
+### Request & Data Lifecycle
+
+1. **Client Connection:** User joins a Room via the frontend; a WebSocket connection is established to the closest edge node.
+2. **State Sync:** `y-websocket` negotiates state vectors. The backend persists binary CRDT updates into **Redis Streams**.
+3. **Execution:** Code submitted for execution is routed to a token-bucket rate limiter, then dispatched to a temporary `gVisor` Docker sandbox or WASM engine.
+4. **AI Assistant:** Chat queries are intercepted by the **Semantic Cache**. On a miss, the AST Chunker isolates relevant code blocks, builds a Vector RAG context, and routes to Anthropic (falling back to local LLMs via Circuit Breaker on failure).
+
+### Key Subsystems
+
+- **Circuit Breaker (`backend/app/services/circuit_breaker.py`)**: Protects against downstream LLM outages. Transitions strictly through `CLOSED` -> `OPEN` -> `HALF_OPEN`.
+- **Semantic Cache (`backend/app/services/semantic_cache.py`)**: Saves API costs by matching incoming queries against a vector index of previously resolved AST-bound questions.
+- **MLOps Pipeline (`mlops/pipelines/daily_eval_pipeline.py`)**: Periodically re-indexes the vector database and runs Lexical/Groundedness regression checks on the AI's responses using a Golden Dataset.
+
+---
+
+## Available Scripts
+
+### Backend
+
+| Command | Description |
+| ------- | ----------- |
+| `uvicorn app.main:app --reload` | Start FastAPI development server |
+| `alembic upgrade head` | Run all pending migrations |
+| `alembic revision --autogenerate` | Create a new migration script |
+| `pytest backend/tests` | Run the backend test suite |
+| `locust -f backend/tests/load/locustfile.py` | Run 500 VU load test simulation |
+
+### Frontend
+
+| Command | Description |
+| ------- | ----------- |
+| `npm run dev` | Start Vite dev server |
+| `npm run build` | Compile optimized production build |
+| `npm run preview` | Preview production build locally |
+
+---
+
+## Testing
+
+NexGrid uses `pytest` with `pytest-asyncio` for robust backend testing.
+
+```bash
+# Run all tests
+pytest backend/tests
+
+# Run tests with verbose output
+pytest backend/tests -v
+
+# Test only the AI evaluation pipeline
+pytest backend/tests/test_ai_evals.py
+```
+
+*Frontend testing (Vitest/Playwright) pipeline is configured in the CI/CD pipeline.*
+
+---
+
+## Deployment
+
+NexGrid is designed to be deployed using Docker on edge platforms like Fly.io or Render.
+
+### Docker Compose (Local/Staging)
+
+```bash
+docker-compose -f docker-compose.staging.yml up --build -d
+```
+This spins up Postgres, Redis, Prometheus, Grafana, and the NexGrid application containers.
+
+### Fly.io (Production)
+
+Configuration lives in `backend/fly.toml`.
+
+```bash
+cd backend
+fly launch
+fly secrets set DATABASE_URL="..." REDIS_URL="..." ANTHROPIC_API_KEY="..."
+fly deploy
+```
+
+### Terraform Infrastructure
+
 ```bash
 cd infra
 terraform init
 terraform apply
 ```
-Provisions AWS ECS Fargate, ALB with WSS sticky sessions, ElastiCache Redis, and RDS Aurora PostgreSQL.
 
 ---
 
-## License
+## Troubleshooting
 
-Distributed under the MIT License. See `LICENSE` for details.
+### WebSocket Disconnections / Sync Errors
+**Error:** Cursors not appearing or code de-syncing.
+**Solution:** Ensure your local Redis instance is running and accessible. The Y.js backplane requires Redis Pub/Sub to broadcast updates across workers. Check connection limits in `app/core/database.py` (Default asyncpg pool size is tuned to 100).
+
+### Alembic Migration Errors
+**Error:** `Target database is not up to date.`
+**Solution:**
+```bash
+alembic current
+alembic stamp head
+alembic upgrade head
+```
+
+### Sandbox Resource Limits
+**Error:** Code execution fails with `Memory Limit Exceeded`.
+**Solution:** The POSIX/Docker sandbox strictly limits memory (e.g., 50MB per process). If testing locally with heavy ML scripts, increase the bounds in `backend/app/services/sandbox_service.py` under the `_run_docker_isolated` configuration.
