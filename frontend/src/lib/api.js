@@ -54,3 +54,5 @@ export const api = {
   getRoomAnalytics: (roomId) => request(`/analytics/room/${roomId}/summary`),
   executeCode: (roomId, data) => request(`/execution/${roomId}/run`, { method: 'POST', body: JSON.stringify(data) }),
 };
+
+export default api;
