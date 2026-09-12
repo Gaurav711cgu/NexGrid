@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
+import uuid
 
 from app.services.sandbox_service import sandbox_engine
 from app.core.database import db
@@ -125,7 +126,7 @@ async def execute_mcp_tool(
                ROUND(AVG(execution_time_ms)::numeric, 2) AS avg_latency_ms
         FROM execution_logs WHERE room_id = $1::uuid GROUP BY language;
         """
-        rows = await db.fetch(query, room_id)
+        rows = await db.fetch(query, uuid.UUID(room_id))
         return {
             "content": [{"type": "text", "text": f"Analytics for room {room_id}: {rows}"}],
             "analytics": rows,

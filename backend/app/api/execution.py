@@ -40,15 +40,15 @@ async def execute_code_in_room(
     )
 
     # 3. Log to PostgreSQL asynchronously (out-of-band execution log insertion prevents DB connection pool contention)
-    exec_id = str(uuid.uuid4())
-    code_hash = hashlib.sha256(req.code.encode('utf-8')).hexdigest()
+    exec_id = uuid.uuid4()
+    code_hash = hashlib.sha256(req.code.encode("utf-8")).hexdigest()
     
     async def log_execution_background():
         try:
             await db.execute(
                 """INSERT INTO execution_logs (id, room_id, user_id, language, code_hash, stdout, stderr, exit_code, execution_time_ms, blocked, metadata, executed_at)
                    VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
-                exec_id, room_id, user["id"], req.language, code_hash,
+                exec_id, uuid.UUID(room_id), uuid.UUID(user["id"]), req.language, code_hash,
                 result.stdout, result.stderr, result.exit_code, result.execution_time_ms,
                 True if result.blocked else False, json.dumps(result.metadata), datetime.now(timezone.utc)
             )

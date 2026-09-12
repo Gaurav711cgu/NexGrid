@@ -1,3 +1,4 @@
+import uuid
 import logging
 from typing import Optional
 from app.core.database import db
@@ -26,7 +27,7 @@ class RAGContextService:
                 ORDER BY executed_at DESC
                 LIMIT 3
                 """,
-                room_id,
+                uuid.UUID(room_id),
             )
 
             if not logs:

@@ -26,7 +26,7 @@ class RecordEventRequest(BaseModel):
 
 @router.post("", response_model=RoomResponse, status_code=201)
 async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_user)):
-    room_id = str(uuid.uuid4())
+    room_id = uuid.uuid4()
     code = secrets.token_urlsafe(4).upper()[:6]
     lang = (req.language or "python").lower()
     initial_code = req.initial_code or BOILERPLATE.get(lang, BOILERPLATE["python"])
@@ -37,15 +37,15 @@ async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_u
     await db.execute(
         """INSERT INTO rooms (id, code, name, language, owner_id, expires_at, max_participants, is_public, initial_code)
            VALUES ($1::uuid, $2, $3, $4, $5::uuid, $6, $7, $8, $9)""",
-        room_id, code, name, lang, user["id"], expires_at, req.max_participants or 10, req.is_public or False, initial_code
+        room_id, code, name, lang, uuid.UUID(user["id"]), expires_at, req.max_participants or 10, req.is_public or False, initial_code
     )
 
     return RoomResponse(
-        id=room_id,
+        id=str(room_id),
         code=code,
         name=name,
         language=lang,
-        owner_id=user["id"],
+        owner_id=str(user["id"]),
         created_at=now.isoformat(),
         expires_at=expires_at.isoformat(),
         max_participants=req.max_participants or 10,
@@ -80,11 +80,11 @@ async def record_room_event(
     """
     Session Recording Engine: Records CRDT operation events for session playback.
     """
-    event_id = str(uuid.uuid4())
+    event_id = uuid.uuid4()
     await db.execute(
         """INSERT INTO room_events (id, room_id, seq_num, event_type, payload, created_at)
            VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)""",
-        event_id, room_id, req.seq_num, req.event_type, req.payload, datetime.now(timezone.utc)
+        event_id, uuid.UUID(room_id), req.seq_num, req.event_type, req.payload, datetime.now(timezone.utc)
     )
     return {"status": "recorded", "event_id": event_id, "seq_num": req.seq_num}
 
@@ -98,7 +98,7 @@ async def get_room_replay(
     """
     rows = await db.fetch(
         "SELECT id, room_id, seq_num, event_type, payload, created_at FROM room_events WHERE room_id = $1::uuid ORDER BY seq_num ASC",
-        room_id
+        uuid.UUID(room_id)
     )
     return {
         "room_id": room_id,
@@ -138,7 +138,7 @@ async def get_room_execution_history(
                 ORDER BY executed_at DESC, id DESC
                 LIMIT $4
             """
-            rows = await db.fetch(query, room_id, cursor_time, cursor_id, limit + 1)
+            rows = await db.fetch(query, uuid.UUID(room_id), cursor_time, uuid.UUID(cursor_id), limit + 1)
         except Exception:
             rows = []
     else:
@@ -149,7 +149,7 @@ async def get_room_execution_history(
             ORDER BY executed_at DESC, id DESC
             LIMIT $2
         """
-        rows = await db.fetch(query, room_id, limit + 1)
+        rows = await db.fetch(query, uuid.UUID(room_id), limit + 1)
 
     has_more = len(rows) > limit
     items = rows[:limit]

@@ -32,7 +32,7 @@ async def register(req: RegisterRequest, response: Response):
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
 
-    user_id = str(uuid.uuid4())
+    user_id = uuid.uuid4()
     pw_hash = hash_password(req.password)
     
     await db.execute(
@@ -41,7 +41,7 @@ async def register(req: RegisterRequest, response: Response):
         user_id, req.email, pw_hash, req.display_name
     )
 
-    user_data = {"id": user_id, "email": req.email, "display_name": req.display_name}
+    user_data = {"id": str(user_id), "email": req.email, "display_name": req.display_name}
     access_token = create_access_token(user_data)
     refresh_token = create_refresh_token(user_data)
 

@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends
 from app.auth.security import get_current_user
 from app.core.database import db
@@ -32,5 +33,5 @@ async def get_room_analytics(room_id: str, user: dict = Depends(get_current_user
     FROM RankedExecutions
     GROUP BY language;
     """
-    rows = await db.fetch(query, room_id)
+    rows = await db.fetch(query, uuid.UUID(room_id))
     return {"room_id": room_id, "analytics": rows}
