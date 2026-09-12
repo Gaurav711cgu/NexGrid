@@ -123,7 +123,7 @@ async def execute_mcp_tool(
         query = """
         SELECT language, COUNT(*) AS total_executions,
                ROUND(AVG(execution_time_ms)::numeric, 2) AS avg_latency_ms
-        FROM execution_logs WHERE room_id = $1 GROUP BY language;
+        FROM execution_logs WHERE room_id = $1::uuid GROUP BY language;
         """
         rows = await db.fetch(query, room_id)
         return {

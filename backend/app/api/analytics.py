@@ -20,7 +20,7 @@ async def get_room_analytics(room_id: str, user: dict = Depends(get_current_user
             AVG(execution_time_ms) OVER (PARTITION BY language) AS avg_lang_latency_ms,
             ROW_NUMBER() OVER (PARTITION BY language ORDER BY executed_at DESC) AS rank_recent
         FROM execution_logs
-        WHERE room_id = $1
+        WHERE room_id = $1::uuid
     )
     SELECT 
         language,

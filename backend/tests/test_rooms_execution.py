@@ -6,7 +6,7 @@ from app.services.rate_limiter import SlidingWindowRateLimiter
 from app.services.circuit_breaker import CircuitBreaker, CircuitState
 
 def get_auth_header():
-    user = {"id": "usr-100", "email": "testrooms@nexagrid.dev", "display_name": "Room Tester"}
+    user = {"id": "123e4567-e89b-12d3-a456-426614174000", "email": "testrooms@nexagrid.dev", "display_name": "Room Tester"}
     token = create_access_token(user)
     return {"Authorization": f"Bearer {token}"}
 

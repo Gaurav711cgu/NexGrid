@@ -22,7 +22,7 @@ class RAGContextService:
                 """
                 SELECT language, stdout, stderr, exit_code, executed_at
                 FROM execution_logs
-                WHERE room_id = $1
+                WHERE room_id = $1::uuid
                 ORDER BY executed_at DESC
                 LIMIT 3
                 """,

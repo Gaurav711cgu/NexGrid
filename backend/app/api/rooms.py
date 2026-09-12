@@ -36,7 +36,7 @@ async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_u
 
     await db.execute(
         """INSERT INTO rooms (id, code, name, language, owner_id, expires_at, max_participants, is_public, initial_code)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
+           VALUES ($1::uuid, $2, $3, $4, $5::uuid, $6, $7, $8, $9)""",
         room_id, code, name, lang, user["id"], expires_at, req.max_participants or 10, req.is_public or False, initial_code
     )
 
@@ -83,7 +83,7 @@ async def record_room_event(
     event_id = str(uuid.uuid4())
     await db.execute(
         """INSERT INTO room_events (id, room_id, seq_num, event_type, payload, created_at)
-           VALUES ($1, $2, $3, $4, $5, $6)""",
+           VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6)""",
         event_id, room_id, req.seq_num, req.event_type, req.payload, datetime.now(timezone.utc)
     )
     return {"status": "recorded", "event_id": event_id, "seq_num": req.seq_num}
@@ -97,7 +97,7 @@ async def get_room_replay(
     Session Playback Engine: Fetches ordered CRDT operation sequence for session playback.
     """
     rows = await db.fetch(
-        "SELECT id, room_id, seq_num, event_type, payload, created_at FROM room_events WHERE room_id = $1 ORDER BY seq_num ASC",
+        "SELECT id, room_id, seq_num, event_type, payload, created_at FROM room_events WHERE room_id = $1::uuid ORDER BY seq_num ASC",
         room_id
     )
     return {
@@ -134,7 +134,7 @@ async def get_room_execution_history(
             query = """
                 SELECT id, room_id, user_id, language, stdout, stderr, exit_code, execution_time_ms, blocked, metadata, executed_at
                 FROM execution_logs
-                WHERE room_id = $1 AND (executed_at, id) < ($2, $3)
+                WHERE room_id = $1::uuid AND (executed_at, id) < ($2, $3::uuid)
                 ORDER BY executed_at DESC, id DESC
                 LIMIT $4
             """
@@ -145,7 +145,7 @@ async def get_room_execution_history(
         query = """
             SELECT id, room_id, user_id, language, stdout, stderr, exit_code, execution_time_ms, blocked, metadata, executed_at
             FROM execution_logs
-            WHERE room_id = $1
+            WHERE room_id = $1::uuid
             ORDER BY executed_at DESC, id DESC
             LIMIT $2
         """

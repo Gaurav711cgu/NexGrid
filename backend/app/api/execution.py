@@ -47,7 +47,7 @@ async def execute_code_in_room(
         try:
             await db.execute(
                 """INSERT INTO execution_logs (id, room_id, user_id, language, code_hash, stdout, stderr, exit_code, execution_time_ms, blocked, metadata, executed_at)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
+                   VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12)""",
                 exec_id, room_id, user["id"], req.language, code_hash,
                 result.stdout, result.stderr, result.exit_code, result.execution_time_ms,
                 True if result.blocked else False, json.dumps(result.metadata), datetime.now(timezone.utc)

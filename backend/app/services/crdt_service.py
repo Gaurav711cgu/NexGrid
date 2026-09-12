@@ -114,7 +114,7 @@ class CRDTService:
 
             await db.execute(
                 """INSERT INTO room_snapshots (room_id, snapshot_data, op_count)
-                   VALUES ($1, $2, $3)""",
+                   VALUES ($1::uuid, $2, $3)""",
                 room_id, merged_state, op_count,
             )
             logger.info("Y.js stream snapshot created for room %s at %d ops.", room_id, op_count)
@@ -142,7 +142,7 @@ class CRDTService:
         """Fetch the most recent Y.Doc binary snapshot for a room."""
         row = await db.fetchrow(
             """SELECT snapshot_data FROM room_snapshots
-               WHERE room_id = $1 ORDER BY created_at DESC LIMIT 1""",
+               WHERE room_id = $1::uuid ORDER BY created_at DESC LIMIT 1""",
             room_id,
         )
         if row and row["snapshot_data"]:

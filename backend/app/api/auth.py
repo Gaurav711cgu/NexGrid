@@ -37,7 +37,7 @@ async def register(req: RegisterRequest, response: Response):
     
     await db.execute(
         """INSERT INTO users (id, email, password_hash, display_name)
-           VALUES ($1, $2, $3, $4)""",
+           VALUES ($1::uuid, $2, $3, $4)""",
         user_id, req.email, pw_hash, req.display_name
     )
 
