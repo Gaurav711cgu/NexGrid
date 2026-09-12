@@ -36,7 +36,7 @@ jobs:
       - name: Install pip-audit
         run: pip install pip-audit
       - name: Audit backend requirements
-        run: pip-audit -r backend/requirements.txt --fail-on-vuln
+        run: pip-audit -r backend/requirements.txt
 
   frontend-build:
     name: Frontend Build Check
