@@ -152,11 +152,11 @@ class ExecutionSandbox:
         start_time = time.perf_counter()
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            os.chmod(tmpdir, 0o777)
+            os.chmod(tmpdir, 0o777)  # nosec B103
             file_name = "Main.java" if language == "java" else f"main{lang_config['extension']}"
             code_file = Path(tmpdir) / file_name
             code_file.write_text(code, encoding="utf-8")
-            os.chmod(code_file, 0o777)
+            os.chmod(code_file, 0o777)  # nosec B103
 
             stdin_bytes = stdin.encode("utf-8") if stdin else None
 
