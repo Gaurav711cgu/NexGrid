@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from app.core.database import db
 from app.core.redis import redis_client
 from app.core.metrics import CRDT_OPS_TOTAL

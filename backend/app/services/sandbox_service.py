@@ -10,7 +10,6 @@ import ast as python_ast
 from pathlib import Path
 from typing import Optional, Dict, Any
 from app.models.schemas import ExecutionResult
-from app.core.config import settings
 from app.core.metrics import EXECUTION_DURATION, EXECUTION_BLOCKED
 
 logger = logging.getLogger("nexagrid.sandbox")

@@ -52,7 +52,7 @@ async def execute_code_in_room(
                 result.stdout, result.stderr, result.exit_code, result.execution_time_ms,
                 True if result.blocked else False, json.dumps(result.metadata), datetime.now(timezone.utc).isoformat()
             )
-        except Exception as err:
+        except Exception:
             pass
 
     asyncio.create_task(log_execution_background())

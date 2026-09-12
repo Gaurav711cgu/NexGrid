@@ -11,7 +11,6 @@ import json
 from app.services.sandbox_service import sandbox_service
 from app.services.vector_rag_service import vector_rag_service
 from app.services.eval_service import eval_service
-from app.services.semantic_cache import semantic_cache
 
 
 def create_parser():

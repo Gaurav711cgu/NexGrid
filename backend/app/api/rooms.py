@@ -1,7 +1,7 @@
 import uuid
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional, List
+from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 

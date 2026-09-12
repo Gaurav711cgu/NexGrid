@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Any
+from typing import Any
 from app.core.config import settings
 
 logger = logging.getLogger("nexagrid.telemetry")

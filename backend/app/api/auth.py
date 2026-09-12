@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Depends, Response, Request
 from app.models.schemas import RegisterRequest, LoginRequest, AuthResponse
 from app.auth.security import (

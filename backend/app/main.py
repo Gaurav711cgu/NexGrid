@@ -3,7 +3,6 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from prometheus_client import make_asgi_app
 
 from app.core.config import settings
@@ -13,6 +12,7 @@ from app.core.redis import redis_client
 # Single consolidated import block — FIX-3: removed duplicate import
 from app.api import auth, rooms, execution, analytics, mcp
 from app.websocket import collab_ws, presence_ws, ai_ws
+from app.core.telemetry import telemetry_manager
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,7 +33,6 @@ async def lifespan(app: FastAPI):
     await redis_client.close()
 
 
-from app.core.telemetry import telemetry_manager
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

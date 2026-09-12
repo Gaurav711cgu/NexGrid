@@ -1,8 +1,7 @@
 import asyncio
 import logging
 import httpx
-import json
-from typing import AsyncGenerator, Optional, Dict, Any
+from typing import AsyncGenerator, Optional
 from app.core.config import settings
 from app.services.circuit_breaker import ai_circuit_breaker
 from app.core.metrics import AI_COMPLETION_DURATION, AI_TOKEN_USAGE

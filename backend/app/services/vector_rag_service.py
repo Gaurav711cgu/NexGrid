@@ -1,9 +1,9 @@
 import math
 import re
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from dataclasses import dataclass
-from app.services.ast_chunker import ast_chunker, CodeChunk
+from app.services.ast_chunker import ast_chunker
 
 logger = logging.getLogger("nexagrid.vector_rag")
 

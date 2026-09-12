@@ -1,7 +1,7 @@
 import ast
 import logging
 from dataclasses import dataclass, asdict
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 
 logger = logging.getLogger("nexagrid.ast_chunker")
 
