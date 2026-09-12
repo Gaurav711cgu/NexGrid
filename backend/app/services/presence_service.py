@@ -13,7 +13,7 @@ class PresenceManager:
     and cursor line/column coordinates in Redis hashes.
     """
     def _assign_color(self, user_id: str) -> str:
-        idx = int(hashlib.md5(user_id.encode('utf-8')).hexdigest(), 16) % len(COLORS)
+        idx = int(hashlib.sha256(user_id.encode('utf-8')).hexdigest(), 16) % len(COLORS)
         return COLORS[idx]
 
     async def join_room(self, room_id: str, user_id: str, display_name: str) -> Dict[str, Any]:

@@ -60,8 +60,9 @@ class ExecutionSandbox:
             return True
         # Try running docker info fast
         try:
-            res = os.system("docker info > /dev/null 2>&1")
-            return res == 0
+            import subprocess
+            res = subprocess.run(["docker", "info"], capture_output=True, check=False)
+            return res.returncode == 0
         except Exception:
             return False
 
@@ -176,7 +177,7 @@ class ExecutionSandbox:
         start_time: float
     ) -> ExecutionResult:
         """Execute code inside Docker micro-container with maximum security bounds."""
-        container_name = f"nexagrid_sandbox_{hashlib.md5(f'{time.time()}_{file_name}'.encode()).hexdigest()[:10]}"
+        container_name = f"nexagrid_sandbox_{hashlib.sha256(f'{time.time()}_{file_name}'.encode()).hexdigest()[:10]}"
         image = lang_config["image"]
 
         # Formulate Docker isolation command
@@ -188,7 +189,7 @@ class ExecutionSandbox:
             "--cpus=0.5",
             "--pids-limit=32",
             "--read-only",
-            "--tmpfs", "/tmp:exec,mode=1777,size=64m",
+            "--tmpfs", "/tmp:exec,mode=1777,size=64m",  # nosec B108
             "--cap-drop=ALL",
             "--security-opt=no-new-privileges",
             "-v", f"{tmpdir}:/app:ro",
@@ -231,7 +232,8 @@ class ExecutionSandbox:
 
         except asyncio.TimeoutError:
             # Kill running container
-            os.system(f"docker kill {container_name} >/dev/null 2>&1")
+            kill_proc = await asyncio.create_subprocess_exec("docker", "kill", container_name, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+            await kill_proc.wait()
             elapsed_ms = round((time.perf_counter() - start_time) * 1000, 2)
             return ExecutionResult(
                 stdout="",
