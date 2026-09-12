@@ -5,14 +5,21 @@ from app.auth.security import create_access_token
 from app.services.rate_limiter import SlidingWindowRateLimiter
 from app.services.circuit_breaker import CircuitBreaker, CircuitState
 
-def get_auth_header():
-    user = {"id": "123e4567-e89b-12d3-a456-426614174000", "email": "testrooms@nexagrid.dev", "display_name": "Room Tester"}
-    token = create_access_token(user)
+import uuid
+
+def get_auth_header(client):
+    email = f"test_{uuid.uuid4()}@nexagrid.dev"
+    res = client.post("/api/auth/register", json={
+        "email": email,
+        "password": "Password123",
+        "display_name": "Room Tester"
+    })
+    token = res.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
 
 def test_create_and_get_room(client):
-    headers = get_auth_header()
+    headers = get_auth_header(client)
     # Create room
     create_res = client.post(
         "/api/rooms",
@@ -32,7 +39,7 @@ def test_create_and_get_room(client):
 
 
 def test_execute_code_endpoint(client):
-    headers = get_auth_header()
+    headers = get_auth_header(client)
     res = client.post(
         "/api/execution/test-room-123/run",
         json={"code": "print('Hello from REST Execution API')", "language": "python"},
