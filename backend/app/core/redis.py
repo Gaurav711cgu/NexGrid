@@ -93,8 +93,12 @@ class RedisClientManager:
 
     async def close(self):
         if self.redis:
-            await self.redis.close()
-            self.redis = None
+            try:
+                await self.redis.close()
+            except Exception as e:
+                pass
+            finally:
+                self.redis = None
         self.use_fallback = False
         self.fallback = InMemoryRedisFallback()
 

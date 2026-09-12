@@ -94,8 +94,13 @@ class DatabaseManager:
 
     async def close(self):
         if self.pool:
-            await self.pool.close()
-            self.pool = None
+            try:
+                await self.pool.close()
+            except Exception as e:
+                logger.warning(f"Error closing DB pool: {e}")
+            finally:
+                self.pool = None
+        self.use_sqlite = False
 
     async def execute(self, query: str, *args) -> str:
         await self._ensure_connected()
