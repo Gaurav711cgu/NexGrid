@@ -37,7 +37,7 @@ async def create_room(req: CreateRoomRequest, user: dict = Depends(get_current_u
     await db.execute(
         """INSERT INTO rooms (id, code, name, language, owner_id, expires_at, max_participants, is_public, initial_code)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)""",
-        room_id, code, name, lang, user["id"], expires_at.isoformat(), req.max_participants or 10, req.is_public or False, initial_code
+        room_id, code, name, lang, user["id"], expires_at, req.max_participants or 10, req.is_public or False, initial_code
     )
 
     return RoomResponse(
@@ -84,7 +84,7 @@ async def record_room_event(
     await db.execute(
         """INSERT INTO room_events (id, room_id, seq_num, event_type, payload, created_at)
            VALUES ($1, $2, $3, $4, $5, $6)""",
-        event_id, room_id, req.seq_num, req.event_type, req.payload, datetime.now(timezone.utc).isoformat()
+        event_id, room_id, req.seq_num, req.event_type, req.payload, datetime.now(timezone.utc)
     )
     return {"status": "recorded", "event_id": event_id, "seq_num": req.seq_num}
 
