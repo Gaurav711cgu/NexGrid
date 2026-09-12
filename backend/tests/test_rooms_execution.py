@@ -5,37 +5,33 @@ from app.auth.security import create_access_token
 from app.services.rate_limiter import SlidingWindowRateLimiter
 from app.services.circuit_breaker import CircuitBreaker, CircuitState
 
-client = TestClient(app)
-
-
 def get_auth_header():
     user = {"id": "usr-100", "email": "testrooms@nexagrid.dev", "display_name": "Room Tester"}
     token = create_access_token(user)
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_create_and_get_room():
+def test_create_and_get_room(client):
     headers = get_auth_header()
-    with TestClient(app) as test_client:
-        # Create room
-        create_res = test_client.post(
-            "/api/rooms",
-            json={"name": "Test Algo Room", "language": "python", "is_public": True},
-            headers=headers,
-        )
-        assert create_res.status_code == 201
-        room = create_res.json()
-        assert room["name"] == "Test Algo Room"
-        assert "code" in room
-        room_code = room["code"]
+    # Create room
+    create_res = client.post(
+        "/api/rooms",
+        json={"name": "Test Algo Room", "language": "python", "is_public": True},
+        headers=headers,
+    )
+    assert create_res.status_code == 201
+    room = create_res.json()
+    assert room["name"] == "Test Algo Room"
+    assert "code" in room
+    room_code = room["code"]
 
-        # Get room by code (with auth header)
-        get_res = test_client.get(f"/api/rooms/{room_code}", headers=headers)
-        assert get_res.status_code == 200
-        assert get_res.json()["code"] == room_code
+    # Get room by code (with auth header)
+    get_res = client.get(f"/api/rooms/{room_code}", headers=headers)
+    assert get_res.status_code == 200
+    assert get_res.json()["code"] == room_code
 
 
-def test_execute_code_endpoint():
+def test_execute_code_endpoint(client):
     headers = get_auth_header()
     res = client.post(
         "/api/execution/test-room-123/run",

@@ -94,6 +94,9 @@ class RedisClientManager:
     async def close(self):
         if self.redis:
             await self.redis.close()
+            self.redis = None
+        self.use_fallback = False
+        self.fallback = InMemoryRedisFallback()
 
     def _ensure_active(self):
         if self.redis is None:

@@ -11,10 +11,7 @@ from app.auth.security import (
     blacklist_jti,
 )
 
-client = TestClient(app)
-
-
-def test_health_check():
+def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
     assert response.json()["status"] == "healthy"
@@ -73,7 +70,7 @@ async def test_sandbox_blocked_dangerous_code():
     assert "Security Policy Violation" in res.stderr
 
 
-def test_mcp_tool_list():
+def test_mcp_tool_list(client):
     response = client.post("/api/mcp/tools/list")
     assert response.status_code == 200
     tools = response.json()["tools"]
@@ -83,7 +80,7 @@ def test_mcp_tool_list():
     assert "nexgrid_get_analytics" in tool_names
 
 
-def test_mcp_execute_sandbox_tool():
+def test_mcp_execute_sandbox_tool(client):
     user_data = {"id": "test-mcp-user", "email": "mcpuser@example.com", "display_name": "MCP User"}
     token = create_access_token(user_data)
     req = {

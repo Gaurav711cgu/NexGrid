@@ -3,10 +3,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.auth.security import create_access_token, blacklist_jti, decode_token
 
-client = TestClient(app)
-
-
-def test_auth_unauthenticated_request_rejected():
+def test_auth_unauthenticated_request_rejected(client):
     """Unauthenticated requests to protected endpoints return 401."""
     response = client.post(
         "/api/execution/test-room-id/run",
@@ -16,35 +13,34 @@ def test_auth_unauthenticated_request_rejected():
     assert "Authentication required" in response.json()["detail"]
 
 
-def test_auth_register_and_login_flow():
+def test_auth_register_and_login_flow(client):
     """User registration and login return access token and set HttpOnly refresh cookie."""
     test_email = "tester_unique@nexagrid.dev"
     test_password = "SecurePassword123!"
 
-    with TestClient(app) as test_client:
-        # 1. Register
-        reg_response = test_client.post(
-            "/api/auth/register",
-            json={
-                "email": test_email,
-                "password": test_password,
-                "display_name": "Test Runner",
-            },
-        )
-        # 201 created or 400 if already existing from prior run
-        assert reg_response.status_code in [201, 400]
+    # 1. Register
+    reg_response = client.post(
+        "/api/auth/register",
+        json={
+            "email": test_email,
+            "password": test_password,
+            "display_name": "Test Runner",
+        },
+    )
+    # 201 created or 400 if already existing from prior run
+    assert reg_response.status_code in [201, 400]
 
-        # 2. Login
-        login_response = test_client.post(
-            "/api/auth/login",
-            json={"email": test_email, "password": test_password},
-        )
-        assert login_response.status_code == 200
-        data = login_response.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
-        assert data["user"]["email"] == test_email
-        assert "nexagrid_refresh_token" in login_response.cookies
+    # 2. Login
+    login_response = client.post(
+        "/api/auth/login",
+        json={"email": test_email, "password": test_password},
+    )
+    assert login_response.status_code == 200
+    data = login_response.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+    assert data["user"]["email"] == test_email
+    assert "nexagrid_refresh_token" in login_response.cookies
 
 
 @pytest.mark.asyncio
@@ -61,7 +57,7 @@ async def test_auth_token_revocation():
         await decode_token(token, expected_type="access")
 
 
-def test_auth_ws_ticket_issuance():
+def test_auth_ws_ticket_issuance(client):
     """Authenticated users can acquire a 60-second single-use WebSocket connection ticket."""
     user_data = {"id": "ws-user-1", "email": "ws@nexagrid.dev", "display_name": "WS User"}
     token = create_access_token(user_data)
