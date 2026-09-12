@@ -95,7 +95,7 @@ class RedisClientManager:
         if self.redis:
             try:
                 await self.redis.close()
-            except Exception as e:
+            except Exception:
                 pass
             finally:
                 self.redis = None
