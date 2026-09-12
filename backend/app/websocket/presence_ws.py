@@ -3,10 +3,12 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from app.services.presence_service import presence_manager
 
+from typing import Dict, Optional
+
 logger = logging.getLogger("nexagrid.ws_presence")
 router = APIRouter()
 
-presence_connections = {}
+presence_connections: Dict[str, Dict[str, WebSocket]] = {}
 
 @router.websocket("/rooms/{room_id}/presence")
 async def presence_websocket(websocket: WebSocket, room_id: str):
@@ -62,7 +64,7 @@ async def presence_websocket(websocket: WebSocket, room_id: str):
             "all_users": await presence_manager.get_room_presence(room_id)
         })
 
-async def broadcast_presence_event(room_id: str, message: dict, exclude_user: str = None):
+async def broadcast_presence_event(room_id: str, message: dict, exclude_user: Optional[str] = None):
     if room_id not in presence_connections:
         return
     for uid, ws in list(presence_connections[room_id].items()):

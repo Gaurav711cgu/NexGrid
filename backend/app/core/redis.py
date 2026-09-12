@@ -52,7 +52,7 @@ class InMemoryRedisFallback:
             await q.put(message)
 
     def subscribe(self, channel: str) -> asyncio.Queue:
-        q = asyncio.Queue()
+        q: asyncio.Queue[Any] = asyncio.Queue()
         self.listeners[channel].add(q)
         return q
 

@@ -133,7 +133,7 @@ class CRDTService:
         """
         try:
             import y_py  # type: ignore
-            return y_py.merge_updates(updates)
+            return y_py.merge_updates(updates)  # type: ignore
         except ImportError:
             logger.warning("y_py not installed — falling back to binary concatenation for dev/test.")
             return b"".join(updates)

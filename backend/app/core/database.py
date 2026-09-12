@@ -111,8 +111,8 @@ class DatabaseManager:
             conn.close()
             return "OK"
         else:
-            async with self.pool.acquire() as conn:
-                return await conn.execute(query, *args)
+            async with self.pool.acquire() as conn:  # type: ignore
+                return await conn.execute(query, *args)  # type: ignore
 
     async def fetchrow(self, query: str, *args) -> Optional[Dict[str, Any]]:
         await self._ensure_connected()
@@ -128,8 +128,8 @@ class DatabaseManager:
             conn.close()
             return dict(row) if row else None
         else:
-            async with self.pool.acquire() as conn:
-                row = await conn.fetchrow(query, *args)
+            async with self.pool.acquire() as conn:  # type: ignore
+                row = await conn.fetchrow(query, *args)  # type: ignore
                 return dict(row) if row else None
 
     async def fetch(self, query: str, *args) -> List[Dict[str, Any]]:
@@ -146,8 +146,8 @@ class DatabaseManager:
             conn.close()
             return [dict(r) for r in rows]
         else:
-            async with self.pool.acquire() as conn:
-                rows = await conn.fetch(query, *args)
+            async with self.pool.acquire() as conn:  # type: ignore
+                rows = await conn.fetch(query, *args)  # type: ignore
                 return [dict(r) for r in rows]
 
 
