@@ -1,144 +1,116 @@
-@import './styles/tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@layer base {
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-body {
-  background-color: var(--color-black);
-  background-image: 
-    linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
-  background-size: 64px 64px;
-  color: var(--color-text-white);
-  font-family: var(--font-body);
-  overflow-x: hidden;
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display);
-}
-
-/* WCAG AA Visible Focus Ring */
-:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--color-black), 0 0 0 4px var(--color-text-white);
-  border-radius: var(--radius-sm);
-}
-
-/* Orggle-Style Obsidian Display Card */
-.display-card {
-  background: var(--color-card-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-}
-
-.display-card-inner {
-  background: var(--color-card-inner);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-md);
-}
-
-/* Orggle Monospace Capsule Badge */
-.badge-capsule {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--color-border);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-}
-
-/* Solid White Primary Action Button */
-.btn-solid-white {
-  background-color: #ffffff;
-  color: #000000;
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 0.9rem;
-  min-height: var(--min-touch-target);
-  padding: 0.6rem 1.4rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid #ffffff;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: transform 0.15s ease, background-color 0.15s ease;
-}
-
-.btn-solid-white:hover {
-  background-color: #e5e5e5;
-  transform: translateY(-1px);
-}
-
-/* Outlined Secondary Button */
-.btn-outline-white {
-  background-color: transparent;
-  color: #ffffff;
-  font-family: var(--font-body);
-  font-weight: 500;
-  font-size: 0.9rem;
-  min-height: var(--min-touch-target);
-  padding: 0.6rem 1.4rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.btn-outline-white:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Live Green Indicator Dot */
-.live-dot-green {
-  width: 7px;
-  height: 7px;
-  background-color: var(--color-emerald);
-  border-radius: 50%;
-  box-shadow: 0 0 8px var(--color-emerald);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .live-dot-green {
-    animation: pulse-dot 2s infinite ease-in-out;
+  html {
+    color-scheme: dark;
+  }
+  
+  body {
+    @apply bg-neutral-bg1 text-text-primary font-sans antialiased;
+    min-height: 100vh;
+    margin: 0;
+  }
+  
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-neutral-bg1;
+  }
+  
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral-bg2;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-bg5 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-bg6;
   }
 }
 
-@keyframes pulse-dot {
-  0% { transform: scale(0.9); opacity: 0.8; }
-  50% { transform: scale(1.15); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.8; }
+@layer components {
+  /* Glass utility classes based on skill */
+  .glass {
+    @apply backdrop-blur-md bg-white/5 border border-white/10;
+  }
+
+  .glass-card {
+    @apply backdrop-blur-md bg-white/5 border border-white/10 rounded-xl;
+  }
+
+  .glass-panel {
+    @apply backdrop-blur-lg bg-black/40 border border-white/5;
+  }
+
+  .glass-overlay {
+    @apply backdrop-blur-sm bg-black/60;
+  }
+
+  .glass-input {
+    @apply backdrop-blur-sm bg-white/5 border border-white/10 focus:border-brand focus:bg-white/10;
+  }
+
+  /* Legacy components migrated to Tailwind */
+  .btn-solid-white {
+    @apply flex items-center justify-center gap-2 bg-text-primary text-neutral-bg1 font-semibold rounded-md px-4 py-2 transition-transform hover:-translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-outline-white {
+    @apply flex items-center justify-center gap-2 bg-transparent text-text-primary border border-border-subtle rounded-md px-4 py-2 transition-colors hover:bg-white/5;
+  }
+
+  .badge-capsule {
+    @apply flex items-center gap-2 bg-brand-subtle text-brand border border-brand/20 px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase;
+  }
+
+  .live-dot-green {
+    @apply w-2 h-2 rounded-full bg-status-success shadow-[0_0_8px_rgba(16,185,129,0.5)];
+    animation: pulse-green 2s infinite ease-in-out;
+  }
+  
+  .display-card-inner {
+    @apply bg-neutral-bg3 border border-border-subtle rounded-lg;
+  }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+@layer utilities {
+  .animate-in {
+    animation: fadeIn 0.3s ease-out, slideUp 0.3s ease-out;
+  }
 }
-::-webkit-scrollbar-track {
-  background: var(--color-black);
+
+@keyframes pulse-green {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.2); }
+  100% { opacity: 1; transform: scale(1); }
 }
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+
+/* Y.js Monaco Remote Cursors */
+.yRemoteSelection {
+  background-color: rgb(250, 129, 0, 0.5);
+}
+.yRemoteSelectionHead {
+  position: absolute;
+  border-left: 2px solid orange;
+  border-top: 2px solid orange;
+  border-bottom: 2px solid orange;
+  height: 100%;
+  box-sizing: border-box;
+}
+.yRemoteSelectionHead::after {
+  position: absolute;
+  content: ' ';
+  border: 3px solid orange;
   border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  left: -4px;
+  top: -5px;
 }

@@ -1,147 +1,121 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { api } from '../../lib/api'
-import { LogIn, UserPlus, X } from 'lucide-react'
+import React, { useState } from 'react'
+import { motion } from 'framer-motion'
+import { X, Lock, Mail, Github, Loader2 } from 'lucide-react'
+import api from '../../lib/api'
 
-export function AuthModal({ isOpen, onClose, onAuthSuccess }) {
-  const [isRegister, setIsRegister] = useState(false)
+export function AuthModal({ onClose, onSuccess }) {
+  const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const modalRef = useRef(null)
-
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
-
-  if (!isOpen) return null
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setError('')
     setLoading(true)
-
+    setError('')
     try {
-      let res
-      if (isRegister) {
-        res = await api.register({ email, password, display_name: displayName })
+      if (isLogin) {
+        const formData = new URLSearchParams()
+        formData.append('username', email)
+        formData.append('password', password)
+        const res = await api.post('/auth/login', formData, {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        })
+        localStorage.setItem('nexagrid_token', res.data.access_token)
+        const userRes = await api.get('/auth/me')
+        onSuccess(userRes.data)
       } else {
-        res = await api.login({ email, password })
+        const res = await api.post('/auth/register', { email, password })
+        setIsLogin(true)
+        setError('Registration successful! Please sign in.')
       }
-      localStorage.setItem('nexagrid_token', res.access_token)
-      onAuthSuccess(res.user)
-      onClose()
     } catch (err) {
-      setError(err.message)
+      setError(err.response?.data?.detail || err.message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="auth-modal-title"
-      style={{
-        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(9, 13, 22, 0.85)', backdropFilter: 'blur(12px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-      }}
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center glass-overlay p-4"
     >
-      <div ref={modalRef} className="glass-panel" style={{ width: '420px', padding: '2rem', position: 'relative' }}>
-        <button
-          onClick={onClose}
-          aria-label="Close authentication modal"
-          style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', minHeight: '44px', minWidth: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <X size={20} aria-hidden="true" />
-        </button>
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.95, opacity: 0, y: 20 }}
+        className="glass-card w-full max-w-md bg-neutral-bg2 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+      >
+        <div className="flex items-center justify-between p-6 border-b border-border-subtle">
+          <h2 className="text-xl font-display font-bold text-text-primary">
+            {isLogin ? 'Sign In to NexGrid' : 'Create an Account'}
+          </h2>
+          <button onClick={onClose} className="text-text-muted hover:text-text-primary transition-colors">
+            <X size={20} />
+          </button>
+        </div>
 
-        <h2 id="auth-modal-title" style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {isRegister ? <UserPlus color="#6366f1" aria-hidden="true" /> : <LogIn color="#6366f1" aria-hidden="true" />}
-          {isRegister ? 'Create Account' : 'Welcome Back'}
-        </h2>
-        <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-          {isRegister ? 'Sign up for real-time code collaboration' : 'Sign in to access your NexaGrid workspace'}
-        </p>
-
-        {error && (
-          <div role="alert" style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', color: '#f43f5e', padding: '0.75rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {isRegister && (
-            <div>
-              <label htmlFor="display-name" style={{ fontSize: '0.85rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem', fontWeight: 500 }}>
-                Display Name <span style={{ color: '#f43f5e' }}>*</span>
-              </label>
-              <input
-                id="display-name"
-                type="text"
-                className="input-field"
-                placeholder="Alex Developer"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                required
-              />
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {error && (
+            <div className={`p-3 rounded-md text-sm ${error.includes('successful') ? 'bg-status-success/20 text-status-success border border-status-success/50' : 'bg-status-error/20 text-status-error border border-status-error/50'}`}>
+              {error}
             </div>
           )}
-
-          <div>
-            <label htmlFor="email-input" style={{ fontSize: '0.85rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem', fontWeight: 500 }}>
-              Email Address <span style={{ color: '#f43f5e' }}>*</span>
-            </label>
-            <input
-              id="email-input"
-              type="email"
-              className="input-field"
-              placeholder="alex@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+          
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-secondary">Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-2.5 text-text-muted" size={18} />
+              <input 
+                type="email" 
+                required 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-neutral-bg1 border border-border-default rounded-md pl-10 pr-4 py-2.5 text-text-primary focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all placeholder:text-text-muted"
+                placeholder="developer@example.com"
+              />
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="password-input" style={{ fontSize: '0.85rem', color: '#9ca3af', display: 'block', marginBottom: '0.3rem', fontWeight: 500 }}>
-              Password <span style={{ color: '#f43f5e' }}>*</span>
-            </label>
-            <input
-              id="password-input"
-              type="password"
-              className="input-field"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-secondary">Password</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-2.5 text-text-muted" size={18} />
+              <input 
+                type="password" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-neutral-bg1 border border-border-default rounded-md pl-10 pr-4 py-2.5 text-text-primary focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all placeholder:text-text-muted"
+                placeholder="••••••••"
+              />
+            </div>
           </div>
 
-          <button type="submit" className="btn-primary" disabled={loading} style={{ justifyContent: 'center', marginTop: '0.5rem' }}>
-            {loading ? 'Processing...' : (isRegister ? 'Register' : 'Sign In')}
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full btn-solid-white bg-brand text-white border-none py-2.5 rounded-md font-semibold hover:bg-brand-hover flex justify-center items-center"
+          >
+            {loading ? <Loader2 className="animate-spin" size={18} /> : (isLogin ? 'Sign In' : 'Sign Up')}
           </button>
         </form>
 
-        <div style={{ marginTop: '1.25rem', textAlign: 'center', fontSize: '0.85rem', color: '#9ca3af' }}>
-          {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
-          <button
-            onClick={() => setIsRegister(!isRegister)}
-            style={{ background: 'none', border: 'none', color: '#818cf8', fontWeight: 600, cursor: 'pointer', padding: '4px' }}
+        <div className="p-6 border-t border-border-subtle bg-neutral-bg1/50 text-center text-sm text-text-secondary">
+          {isLogin ? "Don't have an account? " : "Already have an account? "}
+          <button 
+            type="button" 
+            onClick={() => setIsLogin(!isLogin)} 
+            className="text-brand font-medium hover:underline focus:outline-none"
           >
-            {isRegister ? 'Sign In' : 'Create One'}
+            {isLogin ? 'Sign Up' : 'Sign In'}
           </button>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }

@@ -1,123 +1,101 @@
 import React, { useState } from 'react'
-import { Sparkles, X, Code, Wrench, FileText, Check } from 'lucide-react'
+import { Sparkles, X, Send, Bot, User as UserIcon, Loader2 } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { useAIStream } from '../../hooks/useAIStream'
 
-export function AIPanel({ isOpen, onClose, onTriggerAI, isGenerating, output, currentCode, language, onApplyCode }) {
-  if (!isOpen) return null
+export function AIPanel({ roomId, user, onClose }) {
+  const [prompt, setPrompt] = useState('')
+  const [messages, setMessages] = useState([
+    { 
+      role: 'assistant', 
+      content: 'I am the NexGrid AI (Powered by Anthropic & Qwen). I have context of your entire file, the AST, and the execution logs. How can I help?' 
+    }
+  ])
+  
+  const { askQuestion, isGenerating } = useAIStream(roomId)
 
-  const [activeTab, setActiveTab] = useState('complete')
-  const [errorContext, setErrorContext] = useState('')
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!prompt.trim() || isGenerating) return
 
-  const handleAction = (action) => {
-    onTriggerAI(action, currentCode, language, 1, errorContext)
+    const userMsg = { role: 'user', content: prompt }
+    setMessages(prev => [...prev, userMsg])
+    setPrompt('')
+
+    try {
+      const response = await askQuestion(userMsg.content)
+      setMessages(prev => [...prev, { role: 'assistant', content: response.answer }])
+    } catch (err) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }])
+    }
   }
 
   return (
-    <aside
-      aria-label="AI Pair Programmer Assistant Drawer"
-      className="glass-panel"
-      style={{
-        width: '380px', height: '100%', borderRadius: 0,
-        borderLeft: '1px solid rgba(255,255,255,0.08)', background: '#0b0f19',
-        display: 'flex', flexDirection: 'column'
-      }}
-    >
-      {/* AI Panel Header */}
-      <div style={{
-        padding: '0.8rem 1rem', borderBottom: '1px solid rgba(255,255,255,0.08)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: 'rgba(99,102,241,0.08)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Sparkles size={18} color="#818cf8" aria-hidden="true" />
-          <span style={{ fontWeight: 600, fontSize: '0.95rem', color: '#e5e7eb' }}>AI Pair Programmer</span>
+    <div className="flex flex-col h-full bg-neutral-bg2 shadow-[-10px_0_30px_rgba(0,0,0,0.5)]">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-border-subtle bg-neutral-bg3">
+        <div className="flex items-center gap-2 font-display font-semibold text-text-primary">
+          <Sparkles size={18} className="text-brand" /> AI Copilot
         </div>
-        <button onClick={onClose} aria-label="Close AI Assistant Drawer" style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', minWidth: '32px', minHeight: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <X size={18} aria-hidden="true" />
+        <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-md transition-colors text-text-secondary">
+          <X size={18} />
         </button>
       </div>
 
-      {/* Mode Action Buttons */}
-      <div style={{ padding: '0.75rem', display: 'flex', gap: '0.4rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <button
-          onClick={() => { setActiveTab('complete'); handleAction('complete'); }}
-          className={activeTab === 'complete' ? 'btn-primary' : 'btn-secondary'}
-          aria-label="Trigger AI Code Refactor"
-          style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', justifyContent: 'center', minHeight: '38px' }}
-        >
-          <Code size={14} aria-hidden="true" /> Refactor
-        </button>
-        <button
-          onClick={() => { setActiveTab('explain'); handleAction('explain'); }}
-          className={activeTab === 'explain' ? 'btn-primary' : 'btn-secondary'}
-          aria-label="Trigger AI Code Explanation"
-          style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', justifyContent: 'center', minHeight: '38px' }}
-        >
-          <FileText size={14} aria-hidden="true" /> Explain
-        </button>
-        <button
-          onClick={() => { setActiveTab('fix_error'); handleAction('fix_error'); }}
-          className={activeTab === 'fix_error' ? 'btn-primary' : 'btn-secondary'}
-          aria-label="Trigger AI Error Fix"
-          style={{ flex: 1, padding: '0.4rem', fontSize: '0.75rem', justifyContent: 'center', minHeight: '38px' }}
-        >
-          <Wrench size={14} aria-hidden="true" /> Fix Error
-        </button>
-      </div>
-
-      {/* Optional Error Context input if fixing error */}
-      {activeTab === 'fix_error' && (
-        <div style={{ padding: '0.5rem 0.75rem' }}>
-          <label htmlFor="ai-error-input" className="sr-only" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden' }}>Error Context</label>
-          <input
-            id="ai-error-input"
-            type="text"
-            className="input-field"
-            placeholder="Paste error message..."
-            value={errorContext}
-            onChange={(e) => setErrorContext(e.target.value)}
-            style={{ fontSize: '0.8rem', padding: '0.4rem 0.6rem' }}
-          />
-        </div>
-      )}
-
-      {/* Streaming Output Box with ARIA Live Region */}
-      <div
-        aria-live="polite"
-        style={{
-          flex: 1, padding: '1rem', overflowY: 'auto', fontSize: '0.85rem',
-          lineHeight: 1.6, fontFamily: 'Fira Code', color: '#d1d5db'
-        }}
-      >
-        {isGenerating && !output && (
-          <div style={{ color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles size={16} aria-hidden="true" /> Streaming response token by token...
+      {/* Chat History */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {messages.map((msg, i) => (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            key={i} 
+            className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+          >
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${msg.role === 'user' ? 'bg-neutral-bg5 text-white' : 'bg-brand text-white shadow-glow'}`}>
+              {msg.role === 'user' ? <UserIcon size={14} /> : <Bot size={14} />}
+            </div>
+            
+            <div className={`px-4 py-2.5 rounded-2xl max-w-[85%] text-sm leading-relaxed ${
+              msg.role === 'user' 
+                ? 'bg-neutral-bg4 text-text-primary rounded-tr-sm' 
+                : 'glass-card border-none bg-neutral-bg3 text-text-secondary rounded-tl-sm'
+            }`}>
+              {msg.content}
+            </div>
+          </motion.div>
+        ))}
+        {isGenerating && (
+          <div className="flex gap-3">
+            <div className="w-8 h-8 rounded-full bg-brand flex items-center justify-center text-white shadow-glow">
+              <Loader2 size={14} className="animate-spin" />
+            </div>
+            <div className="px-4 py-2.5 rounded-2xl bg-neutral-bg3 text-text-secondary rounded-tl-sm text-sm">
+              Analyzing AST...
+            </div>
           </div>
         )}
-
-        {output ? (
-          <div>
-            <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{output}</pre>
-          </div>
-        ) : !isGenerating ? (
-          <div style={{ color: '#6b7280', fontSize: '0.85rem', textAlign: 'center', marginTop: '2rem' }}>
-            Select an action above to stream AI assistance over WebSockets.
-          </div>
-        ) : null}
       </div>
 
-      {/* Apply Code to Editor Footer */}
-      {output && !isGenerating && (
-        <div style={{ padding: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.08)', background: '#111827' }}>
-          <button
-            onClick={() => onApplyCode(output)}
-            className="btn-success"
-            aria-label="Apply AI generated code to Monaco Editor"
-            style={{ width: '100%', justifyContent: 'center', fontSize: '0.85rem' }}
+      {/* Input Area */}
+      <div className="p-4 bg-neutral-bg3 border-t border-border-subtle">
+        <form onSubmit={handleSubmit} className="relative">
+          <input 
+            type="text"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="Ask about the code..."
+            className="w-full bg-neutral-bg1 border border-border-default rounded-full pl-4 pr-12 py-2.5 text-sm text-text-primary focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all placeholder:text-text-muted"
+            disabled={isGenerating}
+          />
+          <button 
+            type="submit" 
+            disabled={!prompt.trim() || isGenerating}
+            className="absolute right-1.5 top-1.5 bottom-1.5 w-8 flex items-center justify-center bg-brand text-white rounded-full hover:bg-brand-hover disabled:opacity-50 transition-colors"
           >
-            <Check size={16} aria-hidden="true" /> Apply to Editor
+            <Send size={14} className="ml-[-2px]" />
           </button>
-        </div>
-      )}
-    </aside>
+        </form>
+      </div>
+    </div>
   )
 }

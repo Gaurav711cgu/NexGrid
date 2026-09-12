@@ -1,99 +1,88 @@
 import React from 'react'
-import { Terminal, ShieldAlert, CheckCircle2, Clock, Cpu, X, Bug } from 'lucide-react'
+import { Terminal, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-export function ExecutionPanel({ executionResult, isRunning, onClose, onDebugWithAI }) {
-  if (!executionResult && !isRunning) return null
+export function ExecutionPanel({ result, isRunning }) {
+  if (isRunning) {
+    return (
+      <div className="h-full flex flex-col p-4 bg-neutral-bg3 text-text-primary font-mono text-sm">
+        <div className="flex items-center gap-2 mb-4 text-brand">
+          <Terminal size={16} />
+          <span className="font-semibold">gVisor Sandbox</span>
+          <span className="ml-auto text-xs opacity-50 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-brand animate-ping" /> Container warming...
+          </span>
+        </div>
+        <div className="flex-1 flex items-center justify-center text-text-muted">
+          Executing code in isolated container...
+        </div>
+      </div>
+    )
+  }
 
-  const hasError = executionResult && (executionResult.exit_code !== 0 || executionResult.blocked || !!executionResult.stderr)
+  if (!result) {
+    return (
+      <div className="h-full flex flex-col p-4 bg-neutral-bg3 text-text-primary font-mono text-sm border-t-2 border-brand/50">
+        <div className="flex items-center gap-2 mb-4 text-text-secondary">
+          <Terminal size={16} />
+          <span className="font-semibold text-text-primary">Terminal</span>
+          <span className="ml-auto text-xs bg-neutral-bg4 px-2 py-0.5 rounded text-text-muted">IDLE</span>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center text-text-muted opacity-50">
+          <Terminal size={32} className="mb-2" />
+          <p>Awaiting execution...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const isError = result.status === 'error'
 
   return (
-    <div
-      role="region"
-      aria-label="Execution Console Output & Telemetry"
-      className="glass-panel"
-      style={{
-        borderRadius: 0, borderTop: '1px solid rgba(255,255,255,0.1)',
-        background: '#0d1117', height: '220px', display: 'flex', flexDirection: 'column'
-      }}
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="h-full flex flex-col bg-[#0d0d0d] text-gray-300 font-mono text-sm relative overflow-hidden border-t-2"
+      style={{ borderTopColor: isError ? '#ef4444' : '#10b981' }}
     >
-      {/* Terminal Bar Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0.4rem 1rem', background: '#161b22', borderBottom: '1px solid rgba(255,255,255,0.08)',
-        fontSize: '0.85rem'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Terminal size={16} color="#818cf8" aria-hidden="true" />
-          <span style={{ fontWeight: 600, fontFamily: 'Fira Code', color: '#e5e7eb' }}>EXECUTION CONSOLE</span>
-          {executionResult && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginLeft: '1rem', fontSize: '0.75rem' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', color: executionResult.exit_code === 0 ? '#10b981' : '#f43f5e', fontWeight: 600 }}>
-                {executionResult.exit_code === 0 ? <CheckCircle2 size={13} aria-hidden="true" /> : <ShieldAlert size={13} aria-hidden="true" />}
-                Exit Code {executionResult.exit_code}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', color: '#9ca3af' }}>
-                <Clock size={13} aria-hidden="true" /> {executionResult.execution_time_ms}ms
-              </span>
-              {executionResult.metadata?.memory_limit_mb && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem', color: '#9ca3af' }}>
-                  <Cpu size={13} aria-hidden="true" /> {executionResult.metadata.memory_limit_mb}MB Limit
-                </span>
-              )}
-            </div>
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-2 bg-[#1a1a1a] border-b border-white/5">
+        {isError ? (
+          <AlertTriangle size={14} className="text-status-error" />
+        ) : (
+          <CheckCircle2 size={14} className="text-status-success" />
+        )}
+        <span className="font-bold text-white text-xs tracking-wider">
+          {isError ? 'EXECUTION FAILED' : 'EXECUTION SUCCESS'}
+        </span>
+        
+        <div className="ml-auto flex items-center gap-4 text-xs text-gray-500">
+          {result.execution_time_ms !== undefined && (
+            <span className="flex items-center gap-1">
+              <Clock size={12} /> {result.execution_time_ms.toFixed(2)}ms
+            </span>
           )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {hasError && onDebugWithAI && (
-            <button
-              onClick={() => onDebugWithAI(executionResult.stderr || "Execution Error")}
-              className="btn-solid-white"
-              aria-label="Debug code execution error using AI"
-              style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', minHeight: '30px', background: '#f59e0b', color: '#000', border: 'none' }}
-            >
-              <Bug size={13} aria-hidden="true" /> Debug with AI
-            </button>
+          {result.memory_usage_mb && (
+            <span>{result.memory_usage_mb.toFixed(1)} MB</span>
           )}
-
-          <button
-            onClick={onClose}
-            aria-label="Close Execution Console Panel"
-            style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px', minWidth: '32px', minHeight: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <X size={16} aria-hidden="true" />
-          </button>
         </div>
       </div>
 
-      {/* Output Console Body */}
-      <div style={{
-        padding: '1rem', flex: 1, overflowY: 'auto', fontFamily: 'Fira Code',
-        fontSize: '0.85rem', lineHeight: 1.5, color: '#f3f4f6'
-      }}>
-        {isRunning ? (
-          <div style={{ color: '#818cf8', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <div className="live-dot" aria-hidden="true" /> Running code inside isolated POSIX sandbox container...
-          </div>
-        ) : executionResult ? (
+      {/* Output Body */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {isError ? (
           <div>
-            {executionResult.blocked && (
-              <div role="alert" style={{ background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', color: '#f43f5e', padding: '0.5rem', borderRadius: '6px', marginBottom: '0.5rem' }}>
-                <ShieldAlert size={14} style={{ display: 'inline', marginRight: '0.3rem' }} aria-hidden="true" />
-                {executionResult.stderr}
-              </div>
-            )}
-            {executionResult.stdout && (
-              <pre style={{ whiteSpace: 'pre-wrap', color: '#34d399' }}>{executionResult.stdout}</pre>
-            )}
-            {executionResult.stderr && !executionResult.blocked && (
-              <pre style={{ whiteSpace: 'pre-wrap', color: '#f87171', marginTop: '0.3rem' }}>{executionResult.stderr}</pre>
-            )}
-            {!executionResult.stdout && !executionResult.stderr && !executionResult.blocked && (
-              <span style={{ color: '#6b7280' }}>[Program finished with exit code 0 and no output]</span>
-            )}
+            <div className="text-status-error font-bold mb-2">Traceback (most recent call last):</div>
+            <pre className="whitespace-pre-wrap break-words text-rose-300 leading-relaxed font-mono">
+              {result.error}
+            </pre>
           </div>
-        ) : null}
+        ) : (
+          <pre className="whitespace-pre-wrap break-words leading-relaxed font-mono">
+            {result.output || <span className="text-gray-500 italic">Program exited with no output.</span>}
+          </pre>
+        )}
       </div>
-    </div>
+    </motion.div>
   )
 }

@@ -25,56 +25,48 @@ export function RoomHeader({
   }
 
   return (
-    <header className="display-card" role="banner" style={{
-      borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none',
-      borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '0.6rem 1.5rem',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      background: '#07070a'
-    }}>
+    <header className="glass-panel border-b border-border-subtle px-6 py-3 flex items-center justify-between sticky top-0 z-40">
       {/* Left: Brand Mark & Capsule Badge */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+      <div className="flex items-center gap-5">
         <button
           onClick={() => setActiveTab('hero')}
-          style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Fira Code', fontWeight: 800, fontSize: '1.1rem' }}
+          className="flex items-center gap-2 font-mono font-bold text-lg text-text-primary hover:opacity-80 transition-opacity"
         >
-          <span style={{ color: '#10b981' }}>&gt;_</span> NEXAGRID
+          <span className="text-status-success">&gt;_</span> NEXAGRID
         </button>
 
-        <div className="badge-capsule" style={{ fontSize: '0.7rem' }}>
+        <div className="badge-capsule hidden md:flex">
           <div className="live-dot-green" aria-hidden="true" />
           REAL-TIME CRDT PLATFORM
         </div>
       </div>
 
       {/* Center: Recruiter-First SPA Navigation Tabs (Zero Routing Issues) */}
-      <nav aria-label="Main Application Navigation" style={{ display: 'flex', gap: '0.4rem' }}>
+      <nav aria-label="Main Application Navigation" className="hidden lg:flex items-center gap-2 p-1 bg-neutral-bg2 rounded-lg border border-border-subtle">
         <button
           onClick={() => setActiveTab('editor')}
-          className={activeTab === 'editor' ? 'btn-solid-white' : 'btn-outline-white'}
-          style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', minHeight: '36px' }}
+          className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'editor' ? 'bg-neutral-bg5 text-text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-neutral-bg3'}`}
         >
           STUDIO EDITOR
         </button>
 
         <button
           onClick={() => setActiveTab('metrics')}
-          className={activeTab === 'metrics' ? 'btn-solid-white' : 'btn-outline-white'}
-          style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', minHeight: '36px' }}
+          className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'metrics' ? 'bg-neutral-bg5 text-text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-neutral-bg3'}`}
         >
-          <Activity size={14} aria-hidden="true" /> SYSTEM METRICS & PIPELINES
+          <Activity size={14} aria-hidden="true" /> METRICS
         </button>
 
         <button
           onClick={() => setActiveTab('architecture')}
-          className={activeTab === 'architecture' ? 'btn-solid-white' : 'btn-outline-white'}
-          style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', minHeight: '36px' }}
+          className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${activeTab === 'architecture' ? 'bg-neutral-bg5 text-text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary hover:bg-neutral-bg3'}`}
         >
-          <Layers size={14} aria-hidden="true" /> ARCHITECTURE & SECURITY
+          <Layers size={14} aria-hidden="true" /> ARCHITECTURE
         </button>
       </nav>
 
       {/* Right: Room Actions & User Profile */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div className="flex items-center gap-3">
         {activeTab === 'editor' && (
           <>
             {/* Target Language Select */}
@@ -82,11 +74,7 @@ export function RoomHeader({
               aria-label="Select Target Programming Language"
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="display-card-inner"
-              style={{
-                padding: '0.35rem 0.6rem', fontSize: '0.8rem', color: '#ffffff',
-                fontFamily: 'Fira Code', outline: 'none', cursor: 'pointer'
-              }}
+              className="glass-input text-sm font-mono px-3 py-1.5 rounded-md text-text-primary cursor-pointer outline-none"
             >
               <option value="python">Python 3</option>
               <option value="javascript">JavaScript</option>
@@ -94,39 +82,40 @@ export function RoomHeader({
             </select>
 
             {/* History Logs */}
-            <button onClick={onToggleHistory} className="btn-outline-white" aria-label="Open Execution History Logs" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', minHeight: '36px' }}>
-              <History size={14} aria-hidden="true" /> Logs
+            <button onClick={onToggleHistory} className="btn-outline-white text-sm" aria-label="Open Execution History Logs">
+              <History size={14} aria-hidden="true" /> <span className="hidden sm:inline">Logs</span>
             </button>
 
             {/* AI Assistant */}
-            <button onClick={onToggleAI} className="btn-outline-white" aria-label="Open AI Assistant Drawer" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', minHeight: '36px' }}>
-              <Sparkles size={14} color="#10b981" aria-hidden="true" /> AI
+            <button onClick={onToggleAI} className="btn-outline-white text-sm" aria-label="Open AI Assistant Drawer">
+              <Sparkles size={14} className="text-brand" aria-hidden="true" /> <span className="hidden sm:inline">AI</span>
             </button>
 
             {/* Run Code */}
-            <button onClick={onRunCode} className="btn-solid-white" aria-label="Execute Code in Sandbox Container" disabled={isRunning} style={{ padding: '0.35rem 0.9rem', fontSize: '0.8rem', minHeight: '36px' }}>
-              <Play size={14} fill="black" aria-hidden="true" /> {isRunning ? 'Running...' : 'Run Code'}
+            <button onClick={onRunCode} className="btn-solid-white text-sm" aria-label="Execute Code in Sandbox Container" disabled={isRunning}>
+              <Play size={14} className="text-neutral-bg1" aria-hidden="true" /> {isRunning ? 'Running...' : 'Run Code'}
             </button>
           </>
         )}
 
         {/* User Auth Profile */}
-        {user ? (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            background: 'rgba(255,255,255,0.05)', padding: '0.3rem 0.6rem', borderRadius: '16px',
-            border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.8rem'
-          }}>
-            <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: user.avatar_color || '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700, color: '#000' }}>
-              {user.display_name ? user.display_name[0].toUpperCase() : 'U'}
+        <div className="pl-2 border-l border-border-subtle ml-1">
+          {user ? (
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-full text-sm">
+              <div 
+                className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-black"
+                style={{ backgroundColor: user.avatar_color || '#10b981' }}
+              >
+                {user.display_name ? user.display_name[0].toUpperCase() : 'U'}
+              </div>
+              <span className="font-medium hidden sm:inline">{user.display_name}</span>
             </div>
-            <span>{user.display_name}</span>
-          </div>
-        ) : (
-          <button onClick={onOpenAuth} className="btn-outline-white" aria-label="Open Sign In Dialog" style={{ padding: '0.35rem 0.8rem', fontSize: '0.8rem', minHeight: '36px' }}>
-            <User size={14} aria-hidden="true" /> Sign In
-          </button>
-        )}
+          ) : (
+            <button onClick={onOpenAuth} className="btn-outline-white text-sm">
+              <User size={14} aria-hidden="true" /> Sign In
+            </button>
+          )}
+        </div>
       </div>
     </header>
   )
