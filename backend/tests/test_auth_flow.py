@@ -21,29 +21,30 @@ def test_auth_register_and_login_flow():
     test_email = "tester_unique@nexagrid.dev"
     test_password = "SecurePassword123!"
 
-    # 1. Register
-    reg_response = client.post(
-        "/api/auth/register",
-        json={
-            "email": test_email,
-            "password": test_password,
-            "display_name": "Test Runner",
-        },
-    )
-    # 201 created or 400 if already existing from prior run
-    assert reg_response.status_code in [201, 400]
+    with TestClient(app) as test_client:
+        # 1. Register
+        reg_response = test_client.post(
+            "/api/auth/register",
+            json={
+                "email": test_email,
+                "password": test_password,
+                "display_name": "Test Runner",
+            },
+        )
+        # 201 created or 400 if already existing from prior run
+        assert reg_response.status_code in [201, 400]
 
-    # 2. Login
-    login_response = client.post(
-        "/api/auth/login",
-        json={"email": test_email, "password": test_password},
-    )
-    assert login_response.status_code == 200
-    data = login_response.json()
-    assert "access_token" in data
-    assert data["token_type"] == "bearer"
-    assert data["user"]["email"] == test_email
-    assert "nexagrid_refresh_token" in login_response.cookies
+        # 2. Login
+        login_response = test_client.post(
+            "/api/auth/login",
+            json={"email": test_email, "password": test_password},
+        )
+        assert login_response.status_code == 200
+        data = login_response.json()
+        assert "access_token" in data
+        assert data["token_type"] == "bearer"
+        assert data["user"]["email"] == test_email
+        assert "nexagrid_refresh_token" in login_response.cookies
 
 
 @pytest.mark.asyncio

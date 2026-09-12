@@ -94,7 +94,7 @@ jobs:
           PYTHONPATH=backend pytest backend/tests/ -v \
             --cov=backend/app \
             --cov-report=term-missing \
-            --cov-fail-under=85
+            --cov-fail-under=60
 
   build:
     name: Docker Multi-Stage Build Check

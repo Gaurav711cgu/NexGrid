@@ -16,22 +16,23 @@ def get_auth_header():
 
 def test_create_and_get_room():
     headers = get_auth_header()
-    # Create room
-    create_res = client.post(
-        "/api/rooms",
-        json={"name": "Test Algo Room", "language": "python", "is_public": True},
-        headers=headers,
-    )
-    assert create_res.status_code == 201
-    room = create_res.json()
-    assert room["name"] == "Test Algo Room"
-    assert "code" in room
-    room_code = room["code"]
+    with TestClient(app) as test_client:
+        # Create room
+        create_res = test_client.post(
+            "/api/rooms",
+            json={"name": "Test Algo Room", "language": "python", "is_public": True},
+            headers=headers,
+        )
+        assert create_res.status_code == 201
+        room = create_res.json()
+        assert room["name"] == "Test Algo Room"
+        assert "code" in room
+        room_code = room["code"]
 
-    # Get room by code (with auth header)
-    get_res = client.get(f"/api/rooms/{room_code}", headers=headers)
-    assert get_res.status_code == 200
-    assert get_res.json()["code"] == room_code
+        # Get room by code (with auth header)
+        get_res = test_client.get(f"/api/rooms/{room_code}", headers=headers)
+        assert get_res.status_code == 200
+        assert get_res.json()["code"] == room_code
 
 
 def test_execute_code_endpoint():
